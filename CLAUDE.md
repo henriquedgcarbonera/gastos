@@ -118,28 +118,32 @@ mês a mês (valor exato, sem reajuste).
 - **Problema encontrado:** o Realtime Database `gastos-mensais-3e39a` estava com `.read`/`.write` liberados
   pra qualquer pessoa — confirmado lendo dados reais (salários, saldo) via API pública sem nenhuma credencial.
   O app nunca teve autenticação, só o `firebaseConfig` (que é público por natureza, fica embutido no HTML).
-- **Correção implementada no HTML:** tela de login (e-mail/senha, Firebase Authentication) cobrindo todo o
-  app — nada renderiza nem sincroniza antes do login (`initAuthGate()`, perto do fim do script). Header ganhou
-  botão "Sair". `iniciarApp()` isola o que antes rodava direto no carregamento (renderAll + initFirebaseSync)
-  e só é chamado depois que `onAuthStateChanged` confirma um usuário.
+- **Correção implementada no HTML:** tela de login com **Google Sign-In** (Firebase Authentication) cobrindo
+  todo o app — nada renderiza nem sincroniza antes do login (`initAuthGate()`, perto do fim do script, usa
+  `signInWithPopup(new firebase.auth.GoogleAuthProvider())`). Header ganhou botão "Sair". `iniciarApp()`
+  isola o que antes rodava direto no carregamento (renderAll + initFirebaseSync) e só é chamado depois que
+  `onAuthStateChanged` confirma um usuário.
+- **Contas autorizadas:** `henriquedgcarbonera@gmail.com` (Henrique) e `renderjuliana@gmail.com` (Juliana).
 - **Passos que só vocês podem fazer no Firebase Console** (projeto `gastos-mensais-3e39a`):
-  1. Authentication → Sign-in method → ativar **E-mail/senha**.
-  2. Authentication → Users → criar uma conta pra você e uma pra Juliana (e-mail + senha à escolha de vocês).
-  3. Realtime Database → Regras → colar (trocando os e-mails pelos reais):
+  1. Authentication → Sign-in method → **Google já foi ativado** (feito em 08/09/2026, projeto OAuth
+     `88537286531`).
+  2. Authentication → Settings → **Authorized domains** → adicionar `henriquedgcarbonera.github.io`
+     (sem isso o popup do Google falha com `auth/unauthorized-domain` fora do localhost).
+  3. Realtime Database → Regras → colar:
      ```json
      {
        "rules": {
          ".read": false,
          ".write": false,
          "gastosApp": {
-           ".read": "auth != null && (auth.token.email === 'henrique@...' || auth.token.email === 'juliana@...')",
-           ".write": "auth != null && (auth.token.email === 'henrique@...' || auth.token.email === 'juliana@...')"
+           ".read": "auth != null && (auth.token.email === 'henriquedgcarbonera@gmail.com' || auth.token.email === 'renderjuliana@gmail.com')",
+           ".write": "auth != null && (auth.token.email === 'henriquedgcarbonera@gmail.com' || auth.token.email === 'renderjuliana@gmail.com')"
          }
        }
      }
      ```
-- **Enquanto isso não for feito, não faça `git push` desta versão** — o app publicado ficaria travado na
-  tela de login sem ninguém conseguir entrar (erro `auth/configuration-not-found`, testado localmente).
+- **Enquanto o domínio não estiver autorizado, não faça `git push` desta versão** — o botão "Entrar com
+  Google" falharia no app publicado (funciona em localhost, onde já é autorizado por padrão).
 - Backtest (projeção × saldo real) — escopo definido em 08/09/2026: comparar mês a mês. Implementado na
   aba **Aplicações**, dentro de "Evolução mês a mês": a tabela já comparava saldo projetado × saldo real
   (coluna "Real − projetado"); adicionei o **% de desvio** ao lado do valor em R$ e um resumo acima da

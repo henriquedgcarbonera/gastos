@@ -91,19 +91,9 @@ body:not(.autenticado) #loginGate{display:flex;}
 <div id="loginGate">
   <div class="login-box">
     <h1>💰 Controle de Gastos</h1>
-    <p>Entre com sua conta pra acessar os dados.</p>
-    <form id="formLogin">
-      <div class="form-field">
-        <label for="loginEmail">E-mail</label>
-        <input type="email" id="loginEmail" autocomplete="username" required>
-      </div>
-      <div class="form-field">
-        <label for="loginSenha">Senha</label>
-        <input type="password" id="loginSenha" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="btn">Entrar</button>
-      <div class="erro" id="loginErro"></div>
-    </form>
+    <p>Entre com a conta Google autorizada pra acessar os dados.</p>
+    <button type="button" class="btn" id="btnLoginGoogle">Entrar com Google</button>
+    <div class="erro" id="loginErro"></div>
   </div>
 </div>
 
@@ -2434,16 +2424,13 @@ function iniciarApp(){
       document.body.classList.remove('autenticado');
     }
   });
-  document.getElementById('formLogin').addEventListener('submit', function(ev){
-    ev.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const senha = document.getElementById('loginSenha').value;
+  document.getElementById('btnLoginGoogle').onclick = function(){
     const erroEl = document.getElementById('loginErro');
     erroEl.textContent = '';
-    firebase.auth().signInWithEmailAndPassword(email, senha).catch(function(err){
+    firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(err){
       erroEl.textContent = 'Não foi possível entrar: '+(err&&err.message?err.message:err);
     });
-  });
+  };
   document.getElementById('btnLogout').onclick = function(){
     firebase.auth().signOut();
   };
