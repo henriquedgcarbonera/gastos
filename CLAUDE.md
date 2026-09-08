@@ -106,10 +106,45 @@ mês a mês (valor exato, sem reajuste).
 
 ## Pendências / próximos passos
 
-- **Backtest** — foi discutido na sessão perdida e **não está no arquivo atual**. Precisa redefinir escopo
-  (ver conversa de 08/09/2026): comparar projeção × saldo real mês a mês? ou testar regras sobre o histórico?
 - Confirmar em uso real que o bug de perda ao reabrir não volta (abrir em navegador limpo e checar set/26).
+- **Login pendente de ativação** (v2026-09-08f, ver seção "Segurança" abaixo): até vocês dois ativarem
+  Email/Senha e criarem as contas no Firebase Console, ninguém consegue entrar no app publicado. Não fazer
+  `git push` desta versão até isso estar pronto.
+- Decidir se o arquivo vira `index.html` (facilitaria a URL, mas não é urgente).
 - (adicionar aqui conforme as sessões avançarem)
+
+## Segurança — login obrigatório (decisão 08/09/2026, v2026-09-08f)
+
+- **Problema encontrado:** o Realtime Database `gastos-mensais-3e39a` estava com `.read`/`.write` liberados
+  pra qualquer pessoa — confirmado lendo dados reais (salários, saldo) via API pública sem nenhuma credencial.
+  O app nunca teve autenticação, só o `firebaseConfig` (que é público por natureza, fica embutido no HTML).
+- **Correção implementada no HTML:** tela de login (e-mail/senha, Firebase Authentication) cobrindo todo o
+  app — nada renderiza nem sincroniza antes do login (`initAuthGate()`, perto do fim do script). Header ganhou
+  botão "Sair". `iniciarApp()` isola o que antes rodava direto no carregamento (renderAll + initFirebaseSync)
+  e só é chamado depois que `onAuthStateChanged` confirma um usuário.
+- **Passos que só vocês podem fazer no Firebase Console** (projeto `gastos-mensais-3e39a`):
+  1. Authentication → Sign-in method → ativar **E-mail/senha**.
+  2. Authentication → Users → criar uma conta pra você e uma pra Juliana (e-mail + senha à escolha de vocês).
+  3. Realtime Database → Regras → colar (trocando os e-mails pelos reais):
+     ```json
+     {
+       "rules": {
+         ".read": false,
+         ".write": false,
+         "gastosApp": {
+           ".read": "auth != null && (auth.token.email === 'henrique@...' || auth.token.email === 'juliana@...')",
+           ".write": "auth != null && (auth.token.email === 'henrique@...' || auth.token.email === 'juliana@...')"
+         }
+       }
+     }
+     ```
+- **Enquanto isso não for feito, não faça `git push` desta versão** — o app publicado ficaria travado na
+  tela de login sem ninguém conseguir entrar (erro `auth/configuration-not-found`, testado localmente).
+- Backtest (projeção × saldo real) — escopo definido em 08/09/2026: comparar mês a mês. Implementado na
+  aba **Aplicações**, dentro de "Evolução mês a mês": a tabela já comparava saldo projetado × saldo real
+  (coluna "Real − projetado"); adicionei o **% de desvio** ao lado do valor em R$ e um resumo acima da
+  tabela (`#backtestResumo`) com desvio médio e o mês de maior desvio, calculado só sobre os meses em que
+  saldo projetado e saldo real lançado coexistem.
 
 ## Hospedagem e versionamento (decisão 08/09/2026)
 
