@@ -76,6 +76,11 @@ mês a mês (valor exato, sem reajuste).
 6. Lançamentos e Parcelas unificados (lançamento = parcela).
 7. Cadeiras + Banquetas (Rosa) juntadas numa parcela só (10x R$ 701).
 8. Recorrente que ganha data de fim vira automaticamente prazo definido.
+9. (08/09/2026, v2026-09-08h) **Financiamento reajustado**: set/2026 = R$ 9.890 (parcela veio maior);
+   a partir de out/2026 a base muda pra R$ 7.840, mantendo a queda de R$15/mês até o mesmo fim (07/2061).
+   Meses até 08/2026 não mudaram. Reancoragem calculada em `aplicarMigracoes()`
+   (`_migrouFinanciamentoAjuste202609`), não editada linha a linha pela UI porque afeta os ~418 meses
+   restantes do histórico do item.
 
 ## Bugs corrigidos que não podem voltar
 

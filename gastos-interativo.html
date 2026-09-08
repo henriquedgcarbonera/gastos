@@ -426,7 +426,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-09-08g';
+const APP_VERSAO = '2026-09-08h';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -803,6 +803,29 @@ if(!STATE._migrouAluguelFinanciamento){
   financiamento.mesFim = mesFimFinanciamento;
 
   STATE._migrouAluguelFinanciamento = true;
+  saveStateInterno('migracao');
+}
+/* Ajuste (08/09/2026): parcela do Financiamento veio maior em set/2026
+   (9.890) e a partir de out/2026 a base cai pra 7.840 — troca de linha de
+   crédito ou reajuste, não erro de digitação. Mantém a mesma regra de sempre
+   (cai R$15/mês) só que reancorada na nova base a partir de out/2026, até o
+   mesmo mês final (07/2061). Meses até 08/2026 (inclusive) não mudam. */
+if(!STATE._migrouFinanciamentoAjuste202609){
+  const financiamento = STATE.recorrentesTemporarios.find(r=>r.nome.trim().toLowerCase()==='financiamento');
+  if(financiamento){
+    const mesFimFinanciamento = financiamento.mesFim || '2061-07';
+    const mesReancora = '2026-10';
+    const totalMesesReancora = monthDiff(mesReancora, mesFimFinanciamento) + 1;
+    const novoTrecho = [];
+    for(let i=0; i<totalMesesReancora; i++){
+      novoTrecho.push({ mes: monthAdd(mesReancora, i), valor: Math.round((7840 - 15*i)*100)/100 });
+    }
+    financiamento.historico = financiamento.historico
+      .filter(h=>h.mes < '2026-09')
+      .concat([{ mes:'2026-09', valor: 9890 }], novoTrecho)
+      .sort((a,b)=>a.mes.localeCompare(b.mes));
+  }
+  STATE._migrouFinanciamentoAjuste202609 = true;
   saveStateInterno('migracao');
 }
 /* Migração: lança o saldo real das aplicações de jan-jul/2026, somando o
