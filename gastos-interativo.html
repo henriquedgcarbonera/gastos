@@ -120,7 +120,6 @@ body:not(.autenticado) #loginGate{display:flex;}
   <button data-tab="parcelas">Parcelas (Cartão)</button>
   <button data-tab="apto">Reforma do Apto</button>
   <button data-tab="investimentos">Aplicações</button>
-  <button data-tab="teste">🧪 Teste</button>
 </nav>
 
 <main>
@@ -380,20 +379,6 @@ body:not(.autenticado) #loginGate{display:flex;}
       <table id="tblInvestimentos" style="margin-top:14px;"></table>
     </div>
   </div>
-
-  <!-- TESTE (diagnóstico de versão / persistência / sincronização) -->
-  <div class="tab" id="tab-teste">
-    <div class="cards" id="testeCards"></div>
-    <div class="panel">
-      <h2>Teste de persistência e sincronização</h2>
-      <p class="muted" style="margin-top:-6px;font-size:13px;">Clique no botão, dê F5 e confira se o registro continua. Depois abra no outro computador: ele tem que aparecer lá também, com o id deste dispositivo.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn" id="btnTesteRegistrar">+ Registrar teste agora</button>
-        <button class="btn secondary" id="btnTesteLimpar">Limpar registros de teste</button>
-      </div>
-      <table id="tblTestes" style="margin-top:14px;"></table>
-    </div>
-  </div>
 </main>
 <footer>Todos os dados ficam salvos localmente no seu navegador. Use "Exportar backup" para guardar uma cópia de segurança.</footer>
 <div class="toast" id="toast"></div>
@@ -441,7 +426,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-09-08f';
+const APP_VERSAO = '2026-09-08g';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -505,7 +490,6 @@ function getSyncConfig(){
   return DEFAULT_FIREBASE_CONFIG;
 }
 function setSyncStatus(texto, classe){
-  setTimeout(()=>{ if(typeof renderTeste==='function') renderTeste(); }, 0);
   const el = document.getElementById('syncStatus');
   el.textContent = texto;
   el.className = 'pill '+classe;
@@ -2335,40 +2319,6 @@ document.getElementById('fileImport').onchange=(e)=>{
   e.target.value='';
 };
 
-/* ================== TESTE ================== */
-/* Aba de diagnóstico: mostra versão/dispositivo/estado da nuvem e permite
-   gravar registros carimbados (dispositivo + hora) em STATE.testes, que
-   passam pelo mesmo caminho de persistência dos dados reais. Serve pra
-   validar, sem mexer nos dados de verdade: (1) F5 mantém o registro,
-   (2) o outro computador vê o registro, (3) a versão publicada é a aberta. */
-function renderTeste(){
-  const cards = document.getElementById('testeCards');
-  if(!cards) return;
-  const st = document.getElementById('syncStatus').textContent;
-  cards.innerHTML = `
-    <div class="card"><div class="label">Versão deste app</div><div class="value">v${APP_VERSAO}</div></div>
-    <div class="card"><div class="label">Este dispositivo</div><div class="value" style="font-size:18px;">${dispositivoId()}</div></div>
-    <div class="card"><div class="label">Sincronização</div><div class="value" style="font-size:15px;">${st}</div></div>
-    <div class="card"><div class="label">Última edição do usuário</div><div class="value" style="font-size:15px;">${STATE._syncTs? new Date(STATE._syncTs).toLocaleString('pt-BR') : '—'}</div></div>
-    <div class="card"><div class="label">Meses de cartão lançados</div><div class="value">${(STATE.cartaoAvulso||[]).length}</div></div>`;
-  const list = (STATE.testes||[]).slice().sort((a,b)=>b.ts-a.ts);
-  let rows = list.map(t=>`<tr><td>${new Date(t.ts).toLocaleString('pt-BR')}</td><td>${t.dispositivo}</td><td>v${t.versao}</td></tr>`).join('');
-  if(!rows) rows = `<tr><td colspan="3" class="muted">Nenhum registro de teste.</td></tr>`;
-  document.getElementById('tblTestes').innerHTML = `<thead><tr><th>Quando</th><th>Dispositivo</th><th>Versão</th></tr></thead><tbody>${rows}</tbody>`;
-}
-document.getElementById('btnTesteRegistrar').onclick = ()=>{
-  STATE.testes.push({ ts: Date.now(), dispositivo: dispositivoId(), versao: APP_VERSAO });
-  saveState({motivo:'teste'});
-  toast('Registro de teste salvo. Dê F5 pra conferir.');
-  renderAll();
-};
-document.getElementById('btnTesteLimpar').onclick = ()=>{
-  if(!confirm('Apagar todos os registros de teste?')) return;
-  STATE.testes = [];
-  saveState({motivo:'teste'});
-  renderAll();
-};
-
 /* ================== RENDER GERAL ================== */
 function renderAll(){
   renderDashboard();
@@ -2379,7 +2329,6 @@ function renderAll(){
   renderParcelas();
   renderApto();
   renderInvestimentos();
-  renderTeste();
 }
 function iniciarApp(){
   renderAll();

@@ -106,10 +106,8 @@ mês a mês (valor exato, sem reajuste).
 
 ## Pendências / próximos passos
 
-- Confirmar em uso real que o bug de perda ao reabrir não volta (abrir em navegador limpo e checar set/26).
-- **Login pendente de ativação** (v2026-09-08f, ver seção "Segurança" abaixo): até vocês dois ativarem
-  Email/Senha e criarem as contas no Firebase Console, ninguém consegue entrar no app publicado. Não fazer
-  `git push` desta versão até isso estar pronto.
+- Login com Google **confirmado funcionando em produção** em 08/09/2026 (Henrique testou, F5 manteve o
+  registro). Falta a Juliana confirmar no computador dela com `renderjuliana@gmail.com`.
 - Decidir se o arquivo vira `index.html` (facilitaria a URL, mas não é urgente).
 - (adicionar aqui conforme as sessões avançarem)
 
@@ -144,6 +142,14 @@ mês a mês (valor exato, sem reajuste).
      ```
 - **Enquanto o domínio não estiver autorizado, não faça `git push` desta versão** — o botão "Entrar com
   Google" falharia no app publicado (funciona em localhost, onde já é autorizado por padrão).
+
+## Aba Teste — removida (08/09/2026, v2026-09-08g)
+
+- A aba 🧪 Teste (diagnóstico de versão/dispositivo/sincronização, `renderTeste()`, `STATE.testes`) cumpriu
+  seu papel: confirmou que o bug de perda de lançamentos ao reabrir não voltou, e que o login com Google
+  funciona (F5 mantém sessão e dados). Removida do HTML, nav e JS (`renderAll` não chama mais `renderTeste`).
+  `sanitizeState` continua normalizando a chave `testes` como array (histórico antigo no Firebase não quebra),
+  mas nada mais grava ou lê ela.
 - Backtest (projeção × saldo real) — escopo definido em 08/09/2026: comparar mês a mês. Implementado na
   aba **Aplicações**, dentro de "Evolução mês a mês": a tabela já comparava saldo projetado × saldo real
   (coluna "Real − projetado"); adicionei o **% de desvio** ao lado do valor em R$ e um resumo acima da
