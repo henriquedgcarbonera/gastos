@@ -27,7 +27,7 @@ para texto claro (senão a legenda fica ilegível no fundo escuro).
 | Aba | Função |
 |---|---|
 | Dashboard | KPIs, evolução mensal (últimos 12m / desde o início + projeção de +6m até fim do financiamento em 2061), pizza de composição, detalhamento por categoria com drill-down nos itens |
-| Lançamentos (Cartão) | Consumo avulso mensal do cartão + formulário rápido de compra parcelada (calcula parcela = total ÷ qtd automaticamente). **Editar** (v08c): botão nas tabelas de Lançamentos e Parcelas carrega a compra no mesmo formulário (`iniciarEdicaoLan`), salva no lugar (mesmo id) e atualiza item da Reforma vinculado. **Acompanhamento do consumo** (v2026-09-21a): painel de checkpoints — registra a soma das faturas numa data, desconta assinaturas e parcelas e mostra consumo real × orçamento de R$ 3.000 (só acompanhamento, não muda projeções) |
+| Lançamentos (Cartão) | Consumo avulso mensal do cartão + formulário rápido de compra parcelada (calcula parcela = total ÷ qtd automaticamente). **Editar** (v08c): botão nas tabelas de Lançamentos e Parcelas carrega a compra no mesmo formulário (`iniciarEdicaoLan`), salva no lugar (mesmo id) e atualiza item da Reforma vinculado. **Acompanhamento do consumo** (v2026-09-21a): painel de checkpoints — registra a soma das faturas numa data, desconta assinaturas e parcelas e mostra consumo real × orçamento de R$ 3.000 (o consumo do último checkpoint vai pro consumo do mês e pro Dashboard) |
 | Recorrentes | Itens fixos "eternos" (mensalidades, assinaturas), modelo "vale até mudar" com histórico de reajustes |
 | Prazo Definido | Despesas temporárias com mês de fim (Sociedade, Consórcio, Ozzy, Aluguel, Financiamento…) |
 | Parcelas (Cartão) | Parcelamentos; panorama de quanto fecha por mês; `qtdParcelas` é a única fonte de verdade |
@@ -44,9 +44,13 @@ Header: configurar sincronização · restaurar backup automático · exportar/i
 - `lancamentos[]` — legado; hoje todo lançamento vira parcela (migração unificou os dois sistemas)
 - `cartaoAvulso` — histórico mês a mês do consumo avulso; meses sem valor usam base **R$ 3.000**
 - `cartaoCheckpoints[]` — `{id, mes, data (AAAA-MM-DD), valor, tipo:'fatura'|'consumo'}` (v2026-09-21a). Acompanhamento
-  do consumo do cartão durante o mês; **não alimenta `computeMes` nem `cartaoAvulso`** (orçamento/projeções intocados).
-  Consumo real = valor informado (soma das faturas) − assinaturas do grupo "Assinaturas/Cartão" − parcelas do mês
-  (`deducoesCartaoMes`); compara com `CONSUMO_CARTAO_BASE` (R$ 3.000). `mes` = mês da fatura, não da data do registro.
+  do consumo do cartão durante o mês. Consumo real = valor informado (soma das faturas) − assinaturas do grupo
+  "Assinaturas/Cartão" − parcelas do mês (`deducoesCartaoMes`); compara com `CONSUMO_CARTAO_BASE` (R$ 3.000, orçamento
+  fixo de comparação). `mes` = mês da fatura, não da data do registro.
+  **(v2026-09-21b) Ao registrar/excluir um checkpoint, o consumo real do checkpoint mais recente (por data) do mês é
+  gravado em `cartaoAvulso`** (`sincronizarCheckpointComConsumo`) → o Dashboard mostra o consumo real em tempo real
+  no lugar da estimativa de R$ 3.000. Consumo negativo não é gravado. Se todos os checkpoints do mês forem excluídos,
+  o `cartaoAvulso` do mês fica como está (não volta sozinho pra estimativa).
 - `aptoPlanejado[]` — itens da reforma, com `parcelaId`/vínculo ao lançamento
 - `investimentos` — `{saldoInicial, mesInicial (jan/2026), salarioRefHenrique, salarioRefJuliana}` + saldo real por mês
 - `cdiMensal` — histórico `[{mes, valor}]` vindo do BCB

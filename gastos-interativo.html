@@ -189,7 +189,7 @@ body:not(.autenticado) #loginGate{display:flex;}
     </div>
     <div class="panel">
       <h2 id="ckTitulo">Acompanhamento do consumo</h2>
-      <p class="muted" style="margin-top:-6px;font-size:13px;">Vá registrando a fatura do cartão ao longo do mês. O app desconta as assinaturas e parcelas do mês e mostra o consumo real até aqui, comparado ao orçamento de R$ 3.000,00. <b>É só acompanhamento</b> — não altera o orçamento nem as projeções. Vale o mês selecionado acima. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Vá registrando a fatura do cartão ao longo do mês. O app desconta as assinaturas e parcelas do mês e mostra o consumo real até aqui, comparado ao orçamento de R$ 3.000,00. A cada registro, o consumo real do checkpoint mais recente vai para o <b>consumo do mês</b> (e para o Dashboard) no lugar da estimativa; o orçamento de R$ 3.000 usado na comparação não muda. Vale o mês selecionado acima. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
       <div class="form-grid">
         <div><label>Data do registro</label><input type="date" id="ckData"></div>
         <div><label>Valor informado (R$)</label><input type="number" min="0" step="0.01" id="ckValor" placeholder="0,00"></div>
@@ -440,7 +440,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-09-21a';
+const APP_VERSAO = '2026-09-21b';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1403,10 +1403,23 @@ function renderCartaoMensal(){
 }
 
 /* ================== CHECKPOINTS DO CARTÃO (acompanhamento) ================== */
-/* Só acompanhamento da evolução do gasto durante o mês: NÃO alimenta
-   computeMes nem STATE.cartaoAvulso, então o orçamento (CONSUMO_CARTAO_BASE)
-   e as projeções não mudam. Cada checkpoint = fatura parcial numa data;
-   consumo real = fatura − assinaturas do cartão − parcelas do mês. */
+/* Cada checkpoint = fatura parcial numa data; consumo real = fatura −
+   assinaturas do cartão − parcelas do mês. O consumo real do checkpoint mais
+   recente (por data) do mês é gravado em STATE.cartaoAvulso, que alimenta o
+   Dashboard — assim o mês vai refletindo o consumo real em tempo real, no
+   lugar da estimativa padrão (CONSUMO_CARTAO_BASE, que segue sendo o
+   orçamento de comparação e não muda). */
+function sincronizarCheckpointComConsumo(mes){
+  const list = (STATE.cartaoCheckpoints||[]).filter(c=>c.mes===mes)
+    .sort((a,b)=> a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
+  if(!list.length) return true;
+  const consumo = Math.round(consumoRealCheckpoint(list[list.length-1], deducoesCartaoMes(mes))*100)/100;
+  if(consumo<0) return false;
+  let entry = STATE.cartaoAvulso.find(c=>c.mes===mes);
+  if(!entry){ entry = { id: uid('cav'), mes, valor: consumo }; STATE.cartaoAvulso.push(entry); }
+  else entry.valor = consumo;
+  return true;
+}
 function deducoesCartaoMes(mes){
   const {breakdown} = computeMes(mes);
   const assinaturas = breakdown.recorrentesPorGrupo['Assinaturas/Cartão'] || 0;
@@ -1476,13 +1489,16 @@ document.getElementById('btnAddCk').onclick=()=>{
   if(isNaN(valor) || valor<0){ toast('Valor inválido.'); return; }
   STATE.cartaoCheckpoints.push({ id: uid('ck'), mes: selectedMesCartao, data, valor, tipo });
   document.getElementById('ckValor').value = '';
+  const sincronizou = sincronizarCheckpointComConsumo(selectedMesCartao);
   saveState();
-  toast('Checkpoint registrado!');
+  toast(sincronizou ? 'Checkpoint registrado e consumo do mês atualizado!' : 'Checkpoint registrado, mas o consumo ficou negativo — não foi levado ao consumo do mês.');
   renderAll();
 };
 function removerCheckpointCartao(id){
-  if(!confirm('Excluir este checkpoint?')) return;
+  if(!confirm('Excluir este checkpoint? O consumo do mês será recalculado a partir do último checkpoint restante.')) return;
+  const mes = (STATE.cartaoCheckpoints.find(c=>c.id===id)||{}).mes;
   STATE.cartaoCheckpoints = STATE.cartaoCheckpoints.filter(c=>c.id!==id);
+  if(mes) sincronizarCheckpointComConsumo(mes);
   saveState(); toast('Checkpoint excluído.'); renderAll();
 }
 
