@@ -175,21 +175,13 @@ body:not(.autenticado) #loginGate{display:flex;}
   <div class="tab" id="tab-lancamentos">
     <div class="panel">
       <h2>Consumo mensal do cartão (avulso, não parcelado)</h2>
-      <p class="muted" style="margin-top:-6px;font-size:13px;">Gasto corrido do cartão que você vai alimentando ao longo do mês (compras do dia a dia, sem parcelamento). Todo mês sem valor lançado assume um consumo base de R$ 3.000,00 no orçamento — atualize aqui conforme for gastando na semana.</p>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Gasto corrido do cartão ao longo do mês (compras do dia a dia, sem parcelamento). Registre a soma das faturas quando quiser: o app desconta as assinaturas e parcelas do mês e leva o consumo real do registro mais recente para o <b>consumo do mês</b> (e para o Dashboard). Mês sem valor lançado assume a estimativa de R$ 3.000,00, que também é o orçamento de comparação. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
       <div class="month-nav">
         <button id="prevMesCartao">‹</button>
         <select id="selMesCartao"></select>
         <button id="nextMesCartao">›</button>
       </div>
-      <div class="form-grid" style="max-width:320px;">
-        <div><label>Consumo do mês (R$)</label><input type="number" step="0.01" id="cartaoMesValor"></div>
-        <div><button class="btn" id="btnSalvarCartaoMes" style="width:100%;">Salvar</button></div>
-      </div>
-      <table id="tblCartaoMensal" style="margin-top:14px;"></table>
-    </div>
-    <div class="panel">
-      <h2 id="ckTitulo">Acompanhamento do consumo</h2>
-      <p class="muted" style="margin-top:-6px;font-size:13px;">Vá registrando a fatura do cartão ao longo do mês. O app desconta as assinaturas e parcelas do mês e mostra o consumo real até aqui, comparado ao orçamento de R$ 3.000,00. A cada registro, o consumo real do checkpoint mais recente vai para o <b>consumo do mês</b> (e para o Dashboard) no lugar da estimativa; o orçamento de R$ 3.000 usado na comparação não muda. Vale o mês selecionado acima. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
+      <h3 id="ckTitulo" style="margin-top:4px;">Acompanhamento do consumo</h3>
       <div class="form-grid">
         <div><label>Data do registro</label><input type="date" id="ckData"></div>
         <div><label>Valor informado (R$)</label><input type="number" min="0" step="0.01" id="ckValor" placeholder="0,00"></div>
@@ -200,6 +192,12 @@ body:not(.autenticado) #loginGate{display:flex;}
       <div id="ckBarra" style="height:10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:6px;"><div id="ckBarraFill" style="height:100%;width:0;"></div></div>
       <div class="muted" id="ckAviso" style="font-size:12.5px;min-height:16px;"></div>
       <table id="tblCheckpoints" style="margin-top:10px;"></table>
+      <h3>Ajuste manual do consumo do mês</h3>
+      <div class="form-grid" style="max-width:320px;">
+        <div><label>Consumo do mês (R$)</label><input type="number" step="0.01" id="cartaoMesValor"></div>
+        <div><button class="btn" id="btnSalvarCartaoMes" style="width:100%;">Salvar</button></div>
+      </div>
+      <table id="tblCartaoMensal" style="margin-top:14px;"></table>
     </div>
     <div class="panel">
       <h2 id="tituloFormLan">Adicionar nova compra no cartão</h2>
@@ -440,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-09-21b';
+const APP_VERSAO = '2026-09-21c';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
