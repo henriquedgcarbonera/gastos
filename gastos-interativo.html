@@ -188,6 +188,20 @@ body:not(.autenticado) #loginGate{display:flex;}
       <table id="tblCartaoMensal" style="margin-top:14px;"></table>
     </div>
     <div class="panel">
+      <h2 id="ckTitulo">Acompanhamento do consumo</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Vá registrando a fatura do cartão ao longo do mês. O app desconta as assinaturas e parcelas do mês e mostra o consumo real até aqui, comparado ao orçamento de R$ 3.000,00. <b>É só acompanhamento</b> — não altera o orçamento nem as projeções. Vale o mês selecionado acima. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
+      <div class="form-grid">
+        <div><label>Data do registro</label><input type="date" id="ckData"></div>
+        <div><label>Valor informado (R$)</label><input type="number" min="0" step="0.01" id="ckValor" placeholder="0,00"></div>
+        <div><label>O valor é…</label><select id="ckTipo"><option value="fatura">Soma das faturas (desconta assinaturas e parcelas)</option><option value="consumo">Consumo já apurado (sem descontar)</option></select></div>
+        <div><button class="btn" id="btnAddCk" style="width:100%;">+ Registrar checkpoint</button></div>
+      </div>
+      <div class="cards" id="ckCards" style="margin-top:14px;"></div>
+      <div id="ckBarra" style="height:10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:6px;"><div id="ckBarraFill" style="height:100%;width:0;"></div></div>
+      <div class="muted" id="ckAviso" style="font-size:12.5px;min-height:16px;"></div>
+      <table id="tblCheckpoints" style="margin-top:10px;"></table>
+    </div>
+    <div class="panel">
       <h2 id="tituloFormLan">Adicionar nova compra no cartão</h2>
       <p class="muted" style="margin-top:-6px;font-size:13px;">A compra pode cair na fatura do mês seguinte (depende do fechamento do cartão). O que conta pros cálculos é sempre o <b>mês do pagamento</b> (1ª parcela), não a data da compra.</p>
       <div class="form-grid">
@@ -400,7 +414,7 @@ let STATE = null;
 function sanitizeState(obj){
   const base = JSON.parse(JSON.stringify(SEED));
   const merged = Object.assign({}, base, obj);
-  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes'].forEach(k=>{
+  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints'].forEach(k=>{
     if(!Array.isArray(merged[k])) merged[k] = Array.isArray(base[k]) ? base[k] : [];
   });
   if(!merged.investimentos || typeof merged.investimentos!=='object'){
@@ -426,7 +440,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-09-08h';
+const APP_VERSAO = '2026-09-21a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1385,6 +1399,91 @@ function renderCartaoMensal(){
   document.getElementById('tblCartaoMensal').innerHTML = `
     <thead><tr><th>Mês</th><th style="text-align:right;">Consumo lançado</th></tr></thead>
     <tbody>${rows}</tbody>`;
+  renderCheckpointsCartao();
+}
+
+/* ================== CHECKPOINTS DO CARTÃO (acompanhamento) ================== */
+/* Só acompanhamento da evolução do gasto durante o mês: NÃO alimenta
+   computeMes nem STATE.cartaoAvulso, então o orçamento (CONSUMO_CARTAO_BASE)
+   e as projeções não mudam. Cada checkpoint = fatura parcial numa data;
+   consumo real = fatura − assinaturas do cartão − parcelas do mês. */
+function deducoesCartaoMes(mes){
+  const {breakdown} = computeMes(mes);
+  const assinaturas = breakdown.recorrentesPorGrupo['Assinaturas/Cartão'] || 0;
+  const parcelas = breakdown.parcelas + breakdown.lancamentos;
+  return { assinaturas, parcelas, total: assinaturas + parcelas };
+}
+function consumoRealCheckpoint(c, ded){
+  return c.tipo==='consumo' ? c.valor : c.valor - ded.total;
+}
+function fmtDataISO(iso){
+  const [y,m,d] = iso.split('-');
+  return d+'/'+m+'/'+y;
+}
+function hojeISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+function renderCheckpointsCartao(){
+  const mes = selectedMesCartao;
+  document.getElementById('ckTitulo').textContent = 'Acompanhamento do consumo — '+formatMes(mes);
+  const dataEl = document.getElementById('ckData');
+  if(!dataEl.value) dataEl.value = hojeISO();
+  const ded = deducoesCartaoMes(mes);
+  const list = (STATE.cartaoCheckpoints||[]).filter(c=>c.mes===mes)
+    .sort((a,b)=> a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
+  const orcamento = CONSUMO_CARTAO_BASE;
+  const ultimo = list.length ? list[list.length-1] : null;
+  const consumoAtual = ultimo ? consumoRealCheckpoint(ultimo, ded) : null;
+  const restante = consumoAtual!=null ? orcamento - consumoAtual : null;
+  const cards = [
+    { label:'Consumo real até aqui'+(ultimo?' ('+fmtDataISO(ultimo.data)+')':''), value: consumoAtual!=null ? fmtBRL(consumoAtual) : '— (sem checkpoint)', cls: '' },
+    { label:'Orçamento do mês', value: fmtBRL(orcamento), cls:'' },
+    { label: restante!=null && restante<0 ? 'Acima do orçamento' : 'Restante do orçamento', value: restante!=null ? fmtBRL(Math.abs(restante)) : '—', cls: restante==null ? '' : (restante<0 ? 'red' : 'green') },
+    { label:'Descontado da fatura (assinaturas + parcelas)', value: fmtBRL(ded.total), cls:'' },
+  ];
+  document.getElementById('ckCards').innerHTML = cards.map(c=>`<div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>`).join('');
+  const pct = consumoAtual!=null ? Math.max(0, consumoAtual/orcamento*100) : 0;
+  const fill = document.getElementById('ckBarraFill');
+  fill.style.width = Math.min(100, pct)+'%';
+  fill.style.background = pct>100 ? 'var(--red)' : (pct>=80 ? 'var(--yellow)' : 'var(--accent)');
+  const aviso = document.getElementById('ckAviso');
+  if(consumoAtual==null) aviso.textContent = 'Nenhum checkpoint registrado neste mês.';
+  else if(consumoAtual<0) aviso.textContent = 'Consumo negativo: a fatura informada é menor que assinaturas + parcelas do mês ('+fmtBRL(ded.total)+'). Confira o valor ou troque para "Consumo já apurado".';
+  else aviso.textContent = pct.toFixed(0)+'% do orçamento usado. Assinaturas: '+fmtBRL(ded.assinaturas)+' · Parcelas: '+fmtBRL(ded.parcelas)+'.';
+  let rows = list.map((c,i)=>{
+    const consumo = consumoRealCheckpoint(c, ded);
+    const anterior = i>0 ? consumoRealCheckpoint(list[i-1], ded) : null;
+    const delta = anterior!=null ? consumo - anterior : null;
+    return `<tr>
+      <td>${fmtDataISO(c.data)}</td>
+      <td style="text-align:right;">${fmtBRL(c.valor)} <span class="muted" style="font-size:11px;">${c.tipo==='consumo'?'consumo':'fatura'}</span></td>
+      <td style="text-align:right;font-weight:600;">${fmtBRL(consumo)}</td>
+      <td style="text-align:right;">${delta!=null ? (delta>=0?'+':'−')+fmtBRL(Math.abs(delta)) : '<span class="muted">—</span>'}</td>
+      <td class="actions"><button class="btn danger small" onclick="removerCheckpointCartao('${c.id}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
+  if(!list.length) rows = `<tr><td colspan="5" class="muted">Nenhum checkpoint neste mês.</td></tr>`;
+  document.getElementById('tblCheckpoints').innerHTML = `
+    <thead><tr><th>Data</th><th style="text-align:right;">Informado</th><th style="text-align:right;">Consumo real</th><th style="text-align:right;">Desde o anterior</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+document.getElementById('btnAddCk').onclick=()=>{
+  const data = document.getElementById('ckData').value;
+  const valor = parseFloat(document.getElementById('ckValor').value);
+  const tipo = document.getElementById('ckTipo').value;
+  if(!data){ toast('Informe a data.'); return; }
+  if(isNaN(valor) || valor<0){ toast('Valor inválido.'); return; }
+  STATE.cartaoCheckpoints.push({ id: uid('ck'), mes: selectedMesCartao, data, valor, tipo });
+  document.getElementById('ckValor').value = '';
+  saveState();
+  toast('Checkpoint registrado!');
+  renderAll();
+};
+function removerCheckpointCartao(id){
+  if(!confirm('Excluir este checkpoint?')) return;
+  STATE.cartaoCheckpoints = STATE.cartaoCheckpoints.filter(c=>c.id!==id);
+  saveState(); toast('Checkpoint excluído.'); renderAll();
 }
 
 /* ================== LANÇAMENTOS ================== */
