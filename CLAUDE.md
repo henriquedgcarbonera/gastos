@@ -49,7 +49,7 @@ Header: configurar sincronização · restaurar backup automático · exportar/i
   fixo de comparação). `mes` = mês da fatura, não da data do registro.
   **(v2026-09-21b) Ao registrar/excluir um checkpoint, o consumo real do checkpoint mais recente (por data) do mês é
   gravado em `cartaoAvulso`** (`sincronizarCheckpointComConsumo`) → o Dashboard mostra o consumo real em tempo real
-  no lugar da estimativa de R$ 3.000. Consumo negativo não é gravado. Se todos os checkpoints do mês forem excluídos,
+  no lugar da estimativa de R$ 3.000. **(v2026-09-23a) Consumo negativo também é gravado** (fatura menor que assinaturas+parcelas = fatura ainda incompleta ou estorno); o campo manual e a edição inline aceitam negativos. Se todos os checkpoints do mês forem excluídos,
   o `cartaoAvulso` do mês fica como está (não volta sozinho pra estimativa).
 - `aptoPlanejado[]` — itens da reforma, com `parcelaId`/vínculo ao lançamento
 - `investimentos` — `{saldoInicial, mesInicial (jan/2026), salarioRefHenrique, salarioRefJuliana}` + saldo real por mês
