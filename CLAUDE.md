@@ -191,6 +191,7 @@ mês a mês (valor exato, sem reajuste).
 ## Como trabalhar com o Claude neste projeto
 
 - Enviar `gastos-interativo.html` + este `CONTEXTO-projeto-gastos.md` no início da sessão.
+- **Pasta local (desde 15/10/2026):** `Área de Trabalho\Controle de Gastos` (antes `C:\Projetos\gastos`). `Controle de Gastos.bat` abre o app publicado.
 - **Fluxo oficial (a partir de 08/09/2026): Claude Code** na pasta do projeto (que é um clone do repositório `gastos`).
   Este arquivo vive na raiz como `CLAUDE.md` e é lido automaticamente. Toda melhoria termina com: incrementar `APP_VERSAO`,
   atualizar este arquivo, `git commit` + `git push` → Henrique só dá F5 na URL. Nunca entregar HTML para download.
