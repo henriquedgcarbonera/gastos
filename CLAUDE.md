@@ -96,6 +96,10 @@ mês a mês (valor exato, sem reajuste).
     e TikTok Shop 3x 22,19, Claude = R$ 120,44 a partir de out/26, checkpoint de out/26 (08/10) = R$ 15.823,84
     e recalculou o consumo de set, out e nov/26. A compra de 10x R$ 375,80 (Mercado Livre, 30/07) foi
     cancelada/estornada e era a lava e seca original — não entra no app.
+11. (22/10/2026, v2026-10-22b) **Seguro do carro vira parcela** (`_migrouSeguroCarro202611`): o recorrente
+    "seguro" (R$ 140, Assinaturas/Cartão) passou a prazo definido com fim em 10/2026; a renovação entra como
+    parcela "Seguro do carro" 10x R$ 204,70 (nov/26 a ago/27). Consumo de nov/26 recalculado.
+    Na próxima renovação, lançar nova parcela (não recorrente).
 
 ## Bugs corrigidos que não podem voltar
 

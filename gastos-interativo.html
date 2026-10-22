@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-10-22a';
+const APP_VERSAO = '2026-10-22b';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -971,6 +971,28 @@ if(!STATE._migrouConferenciaFaturaOut2026){
 
   ['2026-09','2026-10','2026-11'].forEach(sincronizarCheckpointComConsumo);
   STATE._migrouConferenciaFaturaOut2026 = true;
+  saveStateInterno('migracao');
+}
+/* Seguro do carro renovado (22/10/2026): deixa de ser recorrente e vira
+   parcela do cartão, 10x R$ 204,70 de nov/26 a ago/27. O recorrente "seguro"
+   (Assinaturas/Cartão) passa a prazo definido com fim em out/26 — mesmo
+   tratamento de "recorrente que ganha data de fim" —, então meses até out/26
+   não mudam. O consumo de nov/26 (já com checkpoints) é recalculado, porque
+   a dedução troca de assinatura pra parcela. */
+if(!STATE._migrouSeguroCarro202611){
+  const idx = STATE.recorrentes.findIndex(r=>r.nome.trim().toLowerCase()==='seguro');
+  if(idx>-1){
+    const [seguro] = STATE.recorrentes.splice(idx,1);
+    seguro.historico = seguro.historico.filter(h=>h.mes < '2026-11');
+    seguro.mesFim = '2026-10';
+    STATE.recorrentesTemporarios.push(seguro);
+  }
+  if(!STATE.parcelas.some(p=>p.id==='lan_seguro_carro_2611')){
+    STATE.parcelas.push({ id:'lan_seguro_carro_2611', descricao:'Seguro do carro', categoria:'Seguro',
+      dataCompra:null, valorParcela:204.70, qtdParcelas:10, mesInicio:'2026-11' });
+  }
+  sincronizarCheckpointComConsumo('2026-11');
+  STATE._migrouSeguroCarro202611 = true;
   saveStateInterno('migracao');
 }
 }
