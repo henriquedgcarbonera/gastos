@@ -89,6 +89,13 @@ mês a mês (valor exato, sem reajuste).
    Meses até 08/2026 não mudaram. Reancoragem calculada em `aplicarMigracoes()`
    (`_migrouFinanciamentoAjuste202609`), não editada linha a linha pela UI porque afeta os ~418 meses
    restantes do histórico do item.
+10. (22/10/2026, v2026-10-22a) **Conferência das faturas de out/2026** (`_migrouConferenciaFaturaOut2026`):
+    Itaú Mastercard (R$ 15.339,72) + XP Visa (R$ 484,12), venc. 15/10. Corrigiu valores (Geladeira 886,14;
+    Lava e seca 359,90; Cervejeira 2.499; Torneira de out/26 250,54), prazos (Zara Brusinha 5x; Aquecedor
+    começa em ago/26; Luzes picco devolvidas → só 2 parcelas), incluiu Zara Home 10x 62,98, Eucatur 3x 380,26
+    e TikTok Shop 3x 22,19, Claude = R$ 120,44 a partir de out/26, checkpoint de out/26 (08/10) = R$ 15.823,84
+    e recalculou o consumo de set, out e nov/26. A compra de 10x R$ 375,80 (Mercado Livre, 30/07) foi
+    cancelada/estornada e era a lava e seca original — não entra no app.
 
 ## Bugs corrigidos que não podem voltar
 
@@ -122,6 +129,11 @@ mês a mês (valor exato, sem reajuste).
 - Login com Google **confirmado funcionando em produção** em 08/09/2026 (Henrique testou, F5 manteve o
   registro). Falta a Juliana confirmar no computador dela com `renderjuliana@gmail.com`.
 - Decidir se o arquivo vira `index.html` (facilitaria a URL, mas não é urgente).
+- **Conferência mensal de faturas:** Henrique manda os PDFs fechados (Itaú Mastercard + XP Visa, mesma senha)
+  e o backup JSON exportado; cruzar as linhas "nn/nn" da fatura e a lista "Compras parceladas - próximas
+  faturas" com as parcelas do app (a soma das próximas deve bater com as parcelas do mês seguinte no Itaú).
+  **Checkpoint do mês = soma das faturas dos DOIS cartões** (critério de set e out/26).
+  Correções entram por migração com flag própria. **Próxima: faturas de nov/2026** — conferir o checkpoint de nov.
 - (adicionar aqui conforme as sessões avançarem)
 
 ## Segurança — login obrigatório (decisão 08/09/2026, v2026-09-08f)
