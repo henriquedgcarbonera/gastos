@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-10-22b';
+const APP_VERSAO = '2026-11-09a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1172,6 +1172,15 @@ function faltaOuSobraMesReferencia(mes){
   const salario = saldoSalariosReferencia(mes);
   return { custo, salario, diferenca: salario - custo };
 }
+/* CDI (% a.m.) a usar num mês da projeção. A série 4391 do BC traz o mês
+   corrente com o acumulado PARCIAL (ex: 0,20% no dia 9) e o app repetia esse
+   último valor em todos os meses futuros — projeção pessimista demais. Agora:
+   meses já fechados usam o valor real; o mês corrente e os futuros usam o
+   último mês FECHADO. */
+function taxaCdiMes(mes){
+  const ultimoFechado = monthAdd(todayMonth(), -1);
+  return getValorNoMes(STATE.cdiMensal, mes < todayMonth() ? mes : ultimoFechado);
+}
 /* Saldo aplicado ao final de um mês, partindo do saldo/mês base definidos
    em STATE.investimentos, aplicando o rendimento do CDI mês a mês e
    descontando o que faltou (quando o custo passa do salário) em cada mês
@@ -1190,7 +1199,7 @@ function computeSaldoInvestido(mesAlvo){
     // Mês com CDI real do Banco Central usa o valor daquele mês; meses sem
     // dado ainda (normalmente o futuro) usam o último valor conhecido —
     // é exatamente o que getValorNoMes já faz (repete o último até mudar).
-    const taxaMensalPct = getValorNoMes(STATE.cdiMensal, m);
+    const taxaMensalPct = taxaCdiMes(m);
     saldo = saldo * (1 + taxaMensalPct/100);
     const { diferenca } = faltaOuSobraMesReferencia(m);
     if(diferenca < 0) saldo += diferenca; // só desconta o que faltou
@@ -1218,7 +1227,7 @@ function computeSaldoAtualizado(mesAlvo){
   }
   let saldo = ancoraValor;
   monthRange(monthAdd(ancoraMes,1), mesAlvo).forEach(m=>{
-    const taxaMensalPct = getValorNoMes(STATE.cdiMensal, m);
+    const taxaMensalPct = taxaCdiMes(m);
     saldo = saldo * (1 + taxaMensalPct/100);
     const { diferenca } = faltaOuSobraMes(m);
     if(diferenca < 0) saldo += diferenca;
@@ -2348,11 +2357,14 @@ function renderCdiAtual(){
     document.getElementById('cdiAtual').innerHTML = '<span class="muted">Ainda não foi possível buscar os dados do Banco Central. Clique em "Atualizar CDI" (precisa de internet).</span>';
     return;
   }
-  const ultimo = hist[hist.length-1];
+  const mesRef = monthAdd(todayMonth(), -1);
   const atualizadoEm = STATE._cdiAtualizadoEm ? new Date(STATE._cdiAtualizadoEm).toLocaleString('pt-BR') : '—';
+  const parcial = hist.find(h=>h.mes===todayMonth());
   document.getElementById('cdiAtual').innerHTML =
-    `<span class="hist-tag">CDI de ${formatMes(ultimo.mes)}: ${ultimo.valor.toFixed(2)}% a.m.</span>`+
-    `<span class="muted" style="font-size:12px;"> · usado como referência pros meses futuros · atualizado em ${atualizadoEm}</span>`;
+    `<span class="hist-tag">CDI de ${formatMes(mesRef)}: ${getValorNoMes(hist, mesRef).toFixed(2)}% a.m.</span>`+
+    `<span class="muted" style="font-size:12px;"> · último mês fechado, usado como referência pro mês atual e os futuros`+
+    (parcial ? ` (${formatMes(parcial.mes)} parcial: ${parcial.valor.toFixed(2)}%, não usado)` : '')+
+    ` · atualizado em ${atualizadoEm}</span>`;
 }
 
 let chartInvest = null;

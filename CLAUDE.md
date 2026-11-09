@@ -71,7 +71,9 @@ mês a mês (valor exato, sem reajuste).
   para a projeção futura não acumular erro desde o começo.
 - **Saldo real**: lançado manualmente no fechamento de cada mês (soma do "Patrimônio final" das duas contas);
   jan–jul/2026 já preenchidos via migração. Serve para conferir projeção × realidade.
-- CDI: meses passados com valor real do BCB; futuros repetem o último conhecido. Atualiza sozinho ao abrir.
+- CDI: meses passados com valor real do BCB; **o mês corrente e os futuros usam o último mês FECHADO**
+  (`taxaCdiMes()`, v2026-11-09a). Atualiza sozinho ao abrir. O BCB (série 4391) devolve o mês corrente com
+  acumulado parcial — nunca usar esse valor como referência de projeção.
 
 ## Migrações já feitas (histórico das decisões)
 
@@ -128,7 +130,17 @@ mês a mês (valor exato, sem reajuste).
   **Ao investigar nova perda:** abrir "Restaurar backup automático" e ler motivo/dispositivo dos últimos envios.
   **Todo dispositivo (inclusive o da Juliana) precisa usar a mesma versão do HTML.**
 
+- **(09/11/2026, v2026-11-09a) Projeção de saldo pessimista por CDI parcial:** `computeSaldoInvestido` e
+  `computeSaldoAtualizado` repetiam o último CDI conhecido em todos os meses futuros, mas o último valor da série
+  do BCB é o do mês corrente, ainda parcial (nov/26 = 0,20% no dia 9, contra ~1,07% de um mês cheio). Efeito: saldo
+  projetado ~R$ 12 mil menor em jun/27 e ~R$ 90 mil menor em dez/30. Correção: `taxaCdiMes(mes)` (meses fechados =
+  valor real; mês corrente e futuros = último mês fechado). Só código — nenhum dado foi migrado.
+
 ## Pendências / próximos passos
+
+- **Referência de consumo do cartão (09/11/2026):** média real de ago–nov/26 = R$ 3,72 mil contra o orçamento de
+  R$ 3.000 (set +71%, nov +87%; Henrique confirmou que o estouro de nov foi gasto real). A projeção segue usando
+  R$ 3.000 nos meses futuros — se o padrão se repetir, o déficit real fica ~R$ 700/mês maior.
 
 - Login com Google **confirmado funcionando em produção** em 08/09/2026 (Henrique testou, F5 manteve o
   registro). Falta a Juliana confirmar no computador dela com `renderjuliana@gmail.com`.
