@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-09a';
+const APP_VERSAO = '2026-11-09b';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1172,14 +1172,14 @@ function faltaOuSobraMesReferencia(mes){
   const salario = saldoSalariosReferencia(mes);
   return { custo, salario, diferenca: salario - custo };
 }
-/* CDI (% a.m.) a usar num mês da projeção. A série 4391 do BC traz o mês
-   corrente com o acumulado PARCIAL (ex: 0,20% no dia 9) e o app repetia esse
-   último valor em todos os meses futuros — projeção pessimista demais. Agora:
-   meses já fechados usam o valor real; o mês corrente e os futuros usam o
-   último mês FECHADO. */
+/* CDI (% a.m.) a usar num mês da projeção. Meses já fechados usam o valor
+   real do BC; o mês corrente e os futuros usam um CDI FIXO conservador
+   (decisão de 09/11/2026) — abaixo do CDI recente (~1,07%) de propósito.
+   Antes o app repetia o último valor da série, que é o do mês corrente ainda
+   PARCIAL (ex: 0,20% no dia 9), e a projeção ficava pessimista demais. */
+const CDI_PROJECAO_PCT = 0.8;
 function taxaCdiMes(mes){
-  const ultimoFechado = monthAdd(todayMonth(), -1);
-  return getValorNoMes(STATE.cdiMensal, mes < todayMonth() ? mes : ultimoFechado);
+  return mes < todayMonth() ? getValorNoMes(STATE.cdiMensal, mes) : CDI_PROJECAO_PCT;
 }
 /* Saldo aplicado ao final de um mês, partindo do saldo/mês base definidos
    em STATE.investimentos, aplicando o rendimento do CDI mês a mês e
@@ -2359,11 +2359,9 @@ function renderCdiAtual(){
   }
   const mesRef = monthAdd(todayMonth(), -1);
   const atualizadoEm = STATE._cdiAtualizadoEm ? new Date(STATE._cdiAtualizadoEm).toLocaleString('pt-BR') : '—';
-  const parcial = hist.find(h=>h.mes===todayMonth());
   document.getElementById('cdiAtual').innerHTML =
     `<span class="hist-tag">CDI de ${formatMes(mesRef)}: ${getValorNoMes(hist, mesRef).toFixed(2)}% a.m.</span>`+
-    `<span class="muted" style="font-size:12px;"> · último mês fechado, usado como referência pro mês atual e os futuros`+
-    (parcial ? ` (${formatMes(parcial.mes)} parcial: ${parcial.valor.toFixed(2)}%, não usado)` : '')+
+    `<span class="muted" style="font-size:12px;"> · último mês fechado (só informativo). A projeção do mês atual e dos futuros usa CDI fixo conservador de ${CDI_PROJECAO_PCT.toFixed(2)}% a.m.`+
     ` · atualizado em ${atualizadoEm}</span>`;
 }
 

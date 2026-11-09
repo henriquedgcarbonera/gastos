@@ -71,9 +71,10 @@ mês a mês (valor exato, sem reajuste).
   para a projeção futura não acumular erro desde o começo.
 - **Saldo real**: lançado manualmente no fechamento de cada mês (soma do "Patrimônio final" das duas contas);
   jan–jul/2026 já preenchidos via migração. Serve para conferir projeção × realidade.
-- CDI: meses passados com valor real do BCB; **o mês corrente e os futuros usam o último mês FECHADO**
-  (`taxaCdiMes()`, v2026-11-09a). Atualiza sozinho ao abrir. O BCB (série 4391) devolve o mês corrente com
-  acumulado parcial — nunca usar esse valor como referência de projeção.
+- CDI: meses passados com valor real do BCB; **o mês corrente e os futuros usam um CDI FIXO conservador de
+  0,8% a.m.** (`CDI_PROJECAO_PCT` / `taxaCdiMes()`, decisão do Henrique em 09/11/2026, v2026-11-09b; o CDI recente é
+  ~1,07%). Atualiza sozinho ao abrir. O BCB (série 4391) devolve o mês corrente com acumulado parcial — nunca usar
+  esse valor como referência de projeção. Pra mudar a premissa, editar só `CDI_PROJECAO_PCT`.
 
 ## Migrações já feitas (histórico das decisões)
 
@@ -134,7 +135,10 @@ mês a mês (valor exato, sem reajuste).
   `computeSaldoAtualizado` repetiam o último CDI conhecido em todos os meses futuros, mas o último valor da série
   do BCB é o do mês corrente, ainda parcial (nov/26 = 0,20% no dia 9, contra ~1,07% de um mês cheio). Efeito: saldo
   projetado ~R$ 12 mil menor em jun/27 e ~R$ 90 mil menor em dez/30. Correção: `taxaCdiMes(mes)` (meses fechados =
-  valor real; mês corrente e futuros = último mês fechado). Só código — nenhum dado foi migrado.
+  valor real; mês corrente e futuros = CDI fixo de 0,8% a.m., escolha conservadora do Henrique — v2026-11-09a usou
+  o último mês fechado, trocado na v2026-11-09b). Só código — nenhum dado foi migrado. Referência com 0,8%
+  (backup de 09/11, saldo real nov/26 R$ 229 mil): jun/27 R$ 172,8 mil · dez/27 R$ 172,0 mil · dez/28 R$ 181,1 mil ·
+  piso R$ 171,3 mil em mai/28 · nunca zera.
 
 ## Pendências / próximos passos
 
