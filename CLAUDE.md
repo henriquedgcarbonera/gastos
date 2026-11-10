@@ -112,11 +112,19 @@ mês a mês (valor exato, sem reajuste).
     parcelas do app batem com a fatura em nov (11.068,37) e dez (8.887,79) a centavos. Consumo de nov/26 caiu de
     R$ 5.611,55 para R$ 5.520,90. **Vivo (LITE*Vivo A, 12x R$ 30,00) NÃO vira parcela:** já está no recorrente "vivo"
     (planos do Henrique e da Juliana) — lançar de novo contaria em dobro.
-    Pontos em aberto: (a) o 7x R$ 51,42 é provavelmente o CHUVEIRO da suíte (Reforma, Mercado Livre/DECA, à vista
-    R$ 369,57), que na Reforma está ligado a um lançamento único de R$ 900 em ago/26 (parcela `parc_mt1s8tw9rh3uh`)
-    — não foi mexido, avaliar se o R$ 900 foi estimativa e deve sair; (b) a fatura traz crédito de −R$ 479,97 em
-    21/10 (= 9x R$ 53,33), mas as 9 parcelas seguem nas próximas faturas — se sumirem na fatura de dez, remover
-    `lan_conf2611_ml9`.
+    Ponto em aberto: a fatura traz crédito de −R$ 479,97 em 21/10 (= 9x R$ 53,33), mas as 9 parcelas seguem nas
+    próximas faturas — se sumirem na fatura de dez, remover `lan_conf2611_ml9`.
+13. (10/11/2026, v2026-11-10b) **Ajuste de nomes e chuveiro** (`_migrouAjusteNomesNov2026`): o 7x R$ 51,42 é o
+    **CHUVEIRO da suíte** (Reforma): o item aptop27 foi religado à parcela real (`lan_conf2611_ml7`, 7x 51,42 =
+    359,94) e o lançamento único de R$ 900 de ago/26 (`parc_mt1s8tw9rh3uh`, estimativa antiga) foi removido (ago/26
+    caiu R$ 900). Fone passou a "Fone (estorno devolvido nov/26)". O 9x R$ 53,33 (`lan_conf2611_ml9`) segue como
+    "Eletrônicos 18/10 (nome a confirmar)" — a fatura só diz "eletrônicos"; **pedir o nome ao Henrique** (dá pra
+    renomear em Lançamentos > Editar). **Regra:** não usar o nome da loja (ex: "Mercado Livre") como descrição —
+    usar o nome do item.
+    **Fatura XP de nov/2026 conferida:** R$ 1.393,74 = o implícito; checkpoint de nov (R$ 17.961,41 = Itaú 16.567,67 +
+    XP 1.393,74) está certo, sem ajuste. Assinaturas Apple/Capcut/ChatGPT da XP batem com o app (R$ 119,80 x 119,90);
+    o Vivo Easy anual da XP (10/12, R$ 30) está coberto pelo recorrente "vivo". Sobraram R$ 0,07 (nov) e R$ 0,03
+    (dez) de arredondamento do banco nas parcelas — sem correção.
 
 ## Bugs corrigidos que não podem voltar
 
@@ -167,9 +175,8 @@ mês a mês (valor exato, sem reajuste).
   e o backup JSON exportado; cruzar as linhas "nn/nn" da fatura e a lista "Compras parceladas - próximas
   faturas" com as parcelas do app (a soma das próximas deve bater com as parcelas do mês seguinte no Itaú).
   **Checkpoint do mês = soma das faturas dos DOIS cartões** (critério de set e out/26).
-  Correções entram por migração com flag própria. **Nov/2026:** Itaú conferido (acima, item 12); **falta a fatura
-  da XP de nov** — o checkpoint de nov (R$ 17.961,41 em 09/11) implica XP = R$ 1.393,74 (Itaú 16.567,67 + XP); quando
-  a XP chegar (em out foi R$ 484,12), conferir e ajustar o checkpoint se não bater. A senha dos PDFs o Henrique informa
+  Correções entram por migração com flag própria. **Nov/2026: conferência concluída** (Itaú item 12, XP item 13; checkpoint
+  R$ 17.961,41 certo). A senha dos PDFs o Henrique informa
   a cada fatura (não registrar aqui, o repositório é público); leitura via `pdftotext -upw <senha>` (Git for Windows). **Próxima: faturas de dez/2026.**
 - (adicionar aqui conforme as sessões avançarem)
 

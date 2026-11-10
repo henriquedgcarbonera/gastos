@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-10a';
+const APP_VERSAO = '2026-11-10b';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1022,6 +1022,37 @@ if(!STATE._migrouConferenciaFaturaNov2026){
   ].forEach(n=>{ if(!parc(n.id)) STATE.parcelas.push(n); });
   sincronizarCheckpointComConsumo('2026-11');
   STATE._migrouConferenciaFaturaNov2026 = true;
+  saveStateInterno('migracao');
+}
+/* Ajuste de nomes e do chuveiro da suíte (10/11/2026):
+   - a compra de 18/10, 7x R$ 51,42 (lan_conf2611_ml7, lançada na migração acima)
+     é o CHUVEIRO da suíte. Na Reforma o item (aptop27) estava ligado a um
+     lançamento único de R$ 900 em ago/26 — estimativa antiga, não uma cobrança
+     do cartão. Religa o item à parcela real, acerta os valores dele (7x 51,42 =
+     359,94) e remove o lançamento de R$ 900 de ago/26 (só se a parcela real existir).
+   - Nomes: nada de "Mercado Livre" nas descrições. A compra de 9x R$ 53,33
+     (lan_conf2611_ml9) ainda não tem nome conhecido (a fatura só diz
+     "eletrônicos") — fica como "Eletrônicos 18/10 (nome a confirmar)".
+   - Fone: compra cancelada, estorno devolvido na fatura de nov/26. */
+if(!STATE._migrouAjusteNomesNov2026){
+  const fone = STATE.parcelas.find(p=>p.id==='lan_mutou47e84z62');
+  if(fone) fone.descricao = 'Fone (estorno devolvido nov/26)';
+  const ml9 = STATE.parcelas.find(p=>p.id==='lan_conf2611_ml9');
+  if(ml9){ ml9.descricao = 'Eletrônicos 18/10 (nome a confirmar)'; ml9.categoria = 'Eletrônicos'; }
+  const real = STATE.parcelas.find(p=>p.id==='lan_conf2611_ml7');
+  if(real){
+    real.descricao = 'CHUVEIRO suíte';
+    real.categoria = 'Casa';
+    const ap = STATE.aptoPlanejado.find(i=>i.id==='aptop27');
+    if(ap){
+      ap.lancamentoRef = { aba:'parcelas', id: real.id };
+      ap.parcela = real.valorParcela; ap.qtdX = real.qtdParcelas;
+      ap.parcelado = Math.round(real.valorParcela*real.qtdParcelas*100)/100;
+      ap.total = ap.parcelado + (ap.frete||0);
+    }
+    STATE.parcelas = STATE.parcelas.filter(p=>p.id!=='parc_mt1s8tw9rh3uh');
+  }
+  STATE._migrouAjusteNomesNov2026 = true;
   saveStateInterno('migracao');
 }
 }
