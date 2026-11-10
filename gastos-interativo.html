@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-09c';
+const APP_VERSAO = '2026-11-10a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -993,6 +993,35 @@ if(!STATE._migrouSeguroCarro202611){
   }
   sincronizarCheckpointComConsumo('2026-11');
   STATE._migrouSeguroCarro202611 = true;
+  saveStateInterno('migracao');
+}
+/* Conferência da fatura Itaú de nov/2026 (venc. 15/11, fechada 08/11; total
+   R$ 16.567,67) contra as parcelas lançadas (10/11/2026):
+   - Seguro do carro: a fatura traz 10x R$ 217,10 (Azul Seguros; a 1ª veio
+     217,17), não 204,70.
+   - Fone (Mercado Livre*G, 4x 26,50): compra cancelada — a fatura estorna a
+     parcela de out e o Fone some das próximas faturas. Fica só a parcela de
+     out/26 (já paga e fechada), sem nov/dez/jan.
+   - Mercado Livre 18/10, 9x R$ 53,33 (nov/26 a jul/27): estava fora do app.
+     Há um crédito de -479,97 (= 9x 53,33) na fatura em 21/10, mas as
+     parcelas seguem listadas em "próximas faturas"; o app espelha a fatura.
+   - Mercado 18/10, 7x R$ 51,42 (nov/26 a mai/27): estava fora do app. Provável
+     CHUVEIRO da suíte (Reforma, Mercado Livre/DECA: à vista 369,57, 7x ~360);
+     na Reforma ele está ligado a um lançamento único de R$ 900 em ago/26, que
+     NÃO foi mexido.
+   - Vivo (LITE*Vivo A, 12x 30,00): já está no recorrente "vivo" (planos do
+     Henrique e da Juliana) — não vira parcela, pra não contar em dobro.
+   Recalcula o consumo de nov/26, que desconta parcelas do checkpoint. */
+if(!STATE._migrouConferenciaFaturaNov2026){
+  const parc = id => STATE.parcelas.find(p=>p.id===id);
+  if(parc('lan_seguro_carro_2611')) parc('lan_seguro_carro_2611').valorParcela = 217.10;
+  if(parc('lan_mutou47e84z62')) parc('lan_mutou47e84z62').qtdParcelas = 1; // Fone
+  [
+    { id:'lan_conf2611_ml9', descricao:'Mercado Livre 18/10 (9x)', categoria:'Outros', dataCompra:'2026-10-18', valorParcela:53.33, qtdParcelas:9, mesInicio:'2026-11' },
+    { id:'lan_conf2611_ml7', descricao:'Mercado 18/10 (7x, provável chuveiro suíte)', categoria:'Outros', dataCompra:'2026-10-18', valorParcela:51.42, qtdParcelas:7, mesInicio:'2026-11' },
+  ].forEach(n=>{ if(!parc(n.id)) STATE.parcelas.push(n); });
+  sincronizarCheckpointComConsumo('2026-11');
+  STATE._migrouConferenciaFaturaNov2026 = true;
   saveStateInterno('migracao');
 }
 }
