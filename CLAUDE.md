@@ -114,13 +114,19 @@ mês a mês (valor exato, sem reajuste).
     (planos do Henrique e da Juliana) — lançar de novo contaria em dobro.
     Ponto em aberto: a fatura traz crédito de −R$ 479,97 em 21/10 (= 9x R$ 53,33), mas as 9 parcelas seguem nas
     próximas faturas — se sumirem na fatura de dez, remover `lan_conf2611_ml9`.
-13. (10/11/2026, v2026-11-10b) **Ajuste de nomes e chuveiro** (`_migrouAjusteNomesNov2026`): o 7x R$ 51,42 é o
-    **CHUVEIRO da suíte** (Reforma): o item aptop27 foi religado à parcela real (`lan_conf2611_ml7`, 7x 51,42 =
-    359,94) e o lançamento único de R$ 900 de ago/26 (`parc_mt1s8tw9rh3uh`, estimativa antiga) foi removido (ago/26
-    caiu R$ 900). Fone passou a "Fone (estorno devolvido nov/26)". O 9x R$ 53,33 (`lan_conf2611_ml9`) segue como
-    "Eletrônicos 18/10 (nome a confirmar)" — a fatura só diz "eletrônicos"; **pedir o nome ao Henrique** (dá pra
-    renomear em Lançamentos > Editar). **Regra:** não usar o nome da loja (ex: "Mercado Livre") como descrição —
-    usar o nome do item.
+13. (10/11/2026, v2026-11-10c) **Puxadores Seixo + Fone** (`_migrouPuxadoresSeixo202611`), conferido com a lista de
+    compras do Mercado Livre que o Henrique mandou (print): o 7x R$ 51,42 (`lan_conf2611_ml7`) é o "Puxador Ponto
+    Seixo M Cromado" (R$ 359,97) → "Puxadores Seixo"; o 9x R$ 53,33 (`lan_conf2611_ml9`) é o "Puxador Para Móveis Mdf
+    Ponto…" (R$ 479,97), **reembolsado em 21/10** (= crédito de −R$ 479,97 da fatura) → "Puxadores Seixo (reembolsado
+    21/10)"; as 9 parcelas seguem lançadas porque o Itaú ainda as lista nas próximas faturas (se sumirem na fatura de
+    dez, remover `lan_conf2611_ml9`). Fone → "Fone (estorno devolvido nov/26)". Da mesma lista: Suporte de mesa
+    R$ 188,88 = Suporte monitor 6x 31,48 ✓; Repetidor Mercusys R$ 229 (29/10) é consumo avulso à vista.
+    **ERRO CORRIGIDO:** a v2026-11-10b (no ar das 16:29 até a 10c) tomou o 7x pelo chuveiro da suíte, religou o item
+    aptop27 e removeu o lançamento único de R$ 900 de ago/26 (`parc_mt1s8tw9rh3uh`) — sem confirmação nas compras.
+    A 10c restaura isso (parcela de R$ 900 em ago/26 e aptop27 com 8x 51,50 / total 900) quando a 10b já tinha rodado;
+    o R$ 900 do chuveiro **não foi mexido** e segue como estava. **Regras:** (1) não usar o nome da loja (ex: "Mercado
+    Livre") como descrição, usar o nome do item; (2) não adivinhar o item de uma compra por valor aproximado — conferir
+    com a lista de compras/nota antes de religar ou apagar qualquer coisa já lançada.
     **Fatura XP de nov/2026 conferida:** R$ 1.393,74 = o implícito; checkpoint de nov (R$ 17.961,41 = Itaú 16.567,67 +
     XP 1.393,74) está certo, sem ajuste. Assinaturas Apple/Capcut/ChatGPT da XP batem com o app (R$ 119,80 x 119,90);
     o Vivo Easy anual da XP (10/12, R$ 30) está coberto pelo recorrente "vivo". Sobraram R$ 0,07 (nov) e R$ 0,03
