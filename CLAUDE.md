@@ -125,8 +125,10 @@ mês a mês (valor exato, sem reajuste).
     aptop27 e removeu o lançamento único de R$ 900 de ago/26 (`parc_mt1s8tw9rh3uh`) — sem confirmação nas compras.
     A 10c restaura isso (parcela de R$ 900 em ago/26 e aptop27 com 8x 51,50 / total 900) quando a 10b já tinha rodado;
     o R$ 900 do chuveiro **não foi mexido** e segue como estava. **Regras:** (1) não usar o nome da loja (ex: "Mercado
-    Livre") como descrição, usar o nome do item; (2) não adivinhar o item de uma compra por valor aproximado — conferir
-    com a lista de compras/nota antes de religar ou apagar qualquer coisa já lançada.
+    Livre") como descrição, usar o nome do item; (2) **regra do Henrique (10/11/2026) pra casar compra com item:** pode
+    deduzir quando o valor é **exato**; valor aproximado só vale com diferença de **poucos centavos** (arredondamento
+    de parcela, ex: 51,42 x 51,45). Diferença maior (ex: R$ 369,57 x 359,94) NÃO é evidência — conferir com a lista de
+    compras/nota antes de religar ou apagar qualquer coisa já lançada, e na dúvida perguntar.
     **Fatura XP de nov/2026 conferida:** R$ 1.393,74 = o implícito; checkpoint de nov (R$ 17.961,41 = Itaú 16.567,67 +
     XP 1.393,74) está certo, sem ajuste. Assinaturas Apple/Capcut/ChatGPT da XP batem com o app (R$ 119,80 x 119,90);
     o Vivo Easy anual da XP (10/12, R$ 30) está coberto pelo recorrente "vivo". Sobraram R$ 0,07 (nov) e R$ 0,03
