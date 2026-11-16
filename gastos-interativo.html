@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-16a';
+const APP_VERSAO = '2026-11-16b';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1083,6 +1083,31 @@ if(!STATE._migrouSociedadeCronograma202611){
     soc.mesFim = '2028-05';
   }
   STATE._migrouSociedadeCronograma202611 = true;
+  saveStateInterno('migracao');
+}
+/* Sociedade — contagem EXATA de parcelas (16/11/2026), pela planilha do portal.
+   Cada contrato tem 36 parcelas e o mês de referência é o mês do pagamento
+   (ref. 10/2026 foi pago em 15/10/2026). O contrato de 4/2024 está na parcela
+   31 em nov/26 (faltam 6: nov/26 a abr/27) e o de 6/2025 na 18 (faltam 19:
+   nov/26 a mai/28). A migração acima deixou mai/27 em 4.800, ou seja, uma
+   parcela a mais do 1º contrato (7 em vez de 6). Aqui o app passa a seguir a
+   planilha exatamente: pagamento mínimo = saldo devedor (com juros) ÷ parcelas
+   faltantes, juros 1,113% a.m. (média dos últimos 12 períodos), nov/26 =
+   4.461,79 (mínimo do portal) e mai/27 só com o 2º contrato. Sobrescreve nov/26
+   a mai/28 — vale tanto pra quem já rodou a migração acima quanto pra quem não. */
+if(!STATE._migrouSociedade36Parcelas202611){
+  const soc = (STATE.recorrentesTemporarios||[]).find(r=>r.nome.trim().toLowerCase()==='sociedade');
+  if(soc){
+    const serie = [
+      ['2026-11',4461.79],['2026-12',4511.45],['2027-01',4561.66],['2027-02',4612.43],['2027-03',4663.77],['2027-04',4715.68],
+      ['2027-05',3240.91],['2027-06',3276.98],['2027-07',3313.45],['2027-08',3350.33],['2027-09',3387.62],['2027-10',3425.32],
+      ['2027-11',3463.45],['2027-12',3502.00],['2028-01',3540.97],['2028-02',3580.38],['2028-03',3620.23],['2028-04',3660.52],
+      ['2028-05',3701.27],
+    ];
+    soc.historico = soc.historico.filter(h=>h.mes < '2026-11').concat(serie.map(([mes,valor])=>({ mes, valor })));
+    soc.mesFim = '2028-05';
+  }
+  STATE._migrouSociedade36Parcelas202611 = true;
   saveStateInterno('migracao');
 }
 }

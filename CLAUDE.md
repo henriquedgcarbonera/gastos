@@ -133,7 +133,7 @@ mês a mês (valor exato, sem reajuste).
     XP 1.393,74) está certo, sem ajuste. Assinaturas Apple/Capcut/ChatGPT da XP batem com o app (R$ 119,80 x 119,90);
     o Vivo Easy anual da XP (10/12, R$ 30) está coberto pelo recorrente "vivo". Sobraram R$ 0,07 (nov) e R$ 0,03
     (dez) de arredondamento do banco nas parcelas — sem correção.
-14. (16/11/2026, v2026-11-16a) **Sociedade pelo cronograma real** (`_migrouSociedadeCronograma202611`), conferido com
+14. (16/11/2026, v2026-11-16a — **substituído pelo item 15**) **Sociedade pelo cronograma real** (`_migrouSociedadeCronograma202611`), conferido com
     o portal da partnership (print + planilha do Henrique). São 2 contratos (rodadas 4/2024 e 6/2025): pagamento
     mínimo = saldo devedor (com juros) ÷ parcelas faltantes; juros ~1,11% a.m. (varia 0,83–1,28%) → o mínimo sobe
     ~1%/mês; o Henrique paga o mínimo **arredondado ao múltiplo de R$ 50**. Mínimo de nov/26 = R$ 4.461,79 (app: 4.500).
@@ -144,6 +144,18 @@ mês a mês (valor exato, sem reajuste).
     cima). Total nov/26–mai/28: R$ 69.900 → R$ 74.550; piso de caixa (CDI 0,8%) R$ 170,4 mil → R$ 165,6 mil, sem zerar.
     **Em aberto:** se a última parcela do 2º contrato (ref. mai/28) também for paga no mês seguinte, jun/28 ganha
     ~R$ 3,7 mil — hoje o app encerra a Sociedade em mai/28.
+15. (16/11/2026, v2026-11-16b) **Sociedade: contagem exata de parcelas** (`_migrouSociedade36Parcelas202611`): a
+    planilha do portal mostra **36 parcelas por contrato** e o **mês de referência = mês do pagamento** (ref. 10/2026
+    foi pago em 15/10/2026). Rodada 4/2024: parcela 31 em nov/26 → 6 faltantes (nov/26 a abr/27). Rodada 6/2025:
+    parcela 18 → 19 faltantes (nov/26 a mai/28). A v2026-11-16a deixou mai/27 em R$ 4.800 (uma parcela a mais do 1º
+    contrato: 7 em vez de 6, porque o Henrique tinha dito que pagava a de abril em maio); a planilha manda, então
+    isso foi corrigido. **Agora o app segue a planilha exata**, sem arredondar: mínimo = saldo devedor ÷ parcelas
+    faltantes, juros 1,113% a.m. (média dos últimos 12 períodos), nov/26 = R$ 4.461,79 (valor oficial do portal),
+    mai/27 só com o 2º contrato (R$ 3.240,91), última parcela em mai/28 (R$ 3.701,27). Total nov/26–mai/28
+    R$ 72.590,21; piso de caixa (CDI 0,8%) R$ 167,7 mil em mai/28, sem zerar. Substitui a regra "maior entre app e
+    cronograma" e o 4.800 de abr/mai/27 do item 14; a dúvida de jun/28 deixa de valer (a 36ª parcela do 2º contrato é
+    a de mai/28). Só nov/26 é valor oficial: os meses seguintes dependem da taxa de cada mês (varia 0,83–1,28%), então
+    o total pode variar ~R$ 1–2 mil; refazer a série quando o portal mostrar o mínimo do mês seguinte.
 
 ## Bugs corrigidos que não podem voltar
 
