@@ -438,7 +438,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-10c';
+const APP_VERSAO = '2026-11-16a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -1053,6 +1053,36 @@ if(!STATE._migrouPuxadoresSeixo202611){
   }
   sincronizarCheckpointComConsumo('2026-11');
   STATE._migrouPuxadoresSeixo202611 = true;
+  saveStateInterno('migracao');
+}
+/* Sociedade — cronograma real dos pagamentos (16/11/2026), conferido com o
+   portal da partnership. São dois contratos: o pagamento mínimo de cada um é
+   saldo devedor (já com juros) ÷ parcelas faltantes, os juros rodam ~1,11% a.m.
+   (variam mês a mês, por isso o mínimo sobe ~1% ao mês) e o Henrique paga o
+   mínimo arredondado ao múltiplo de R$ 50. O primeiro contrato termina em
+   abr/27; o segundo, em mai/28.
+   Regra (estimativa conservadora): valor do mês = o MAIOR entre o que o app já
+   tinha e o cronograma.
+   - nov/26: 4.500 (mínimo do portal: 4.461,79).
+   - dez/26 a mai/27: mantidos como estavam (4.600 a 4.800), já acima do
+     cronograma. Abr e mai/27 ficam em 4.800 DE PROPÓSITO: a última parcela do
+     primeiro contrato (referente a abril) é paga em maio.
+   - jun/27 a mai/28: sobem pro cronograma do segundo contrato (3.300 a 3.750);
+     antes ficavam parados em 2.900 a 3.250, sem os juros. mai/28 = última
+     parcela (saldo restante, arredondado pra cima).
+   Só dados: o item e o fim (05/2028) continuam os mesmos. */
+if(!STATE._migrouSociedadeCronograma202611){
+  const soc = (STATE.recorrentesTemporarios||[]).find(r=>r.nome.trim().toLowerCase()==='sociedade');
+  if(soc){
+    const serie = [
+      ['2026-11',4500],['2026-12',4600],['2027-01',4600],['2027-02',4700],['2027-03',4700],['2027-04',4800],['2027-05',4800],
+      ['2027-06',3300],['2027-07',3300],['2027-08',3350],['2027-09',3400],['2027-10',3400],['2027-11',3450],['2027-12',3500],
+      ['2028-01',3550],['2028-02',3600],['2028-03',3600],['2028-04',3650],['2028-05',3750],
+    ];
+    soc.historico = soc.historico.filter(h=>h.mes < '2026-11').concat(serie.map(([mes,valor])=>({ mes, valor })));
+    soc.mesFim = '2028-05';
+  }
+  STATE._migrouSociedadeCronograma202611 = true;
   saveStateInterno('migracao');
 }
 }

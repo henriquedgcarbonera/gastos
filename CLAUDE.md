@@ -133,6 +133,17 @@ mês a mês (valor exato, sem reajuste).
     XP 1.393,74) está certo, sem ajuste. Assinaturas Apple/Capcut/ChatGPT da XP batem com o app (R$ 119,80 x 119,90);
     o Vivo Easy anual da XP (10/12, R$ 30) está coberto pelo recorrente "vivo". Sobraram R$ 0,07 (nov) e R$ 0,03
     (dez) de arredondamento do banco nas parcelas — sem correção.
+14. (16/11/2026, v2026-11-16a) **Sociedade pelo cronograma real** (`_migrouSociedadeCronograma202611`), conferido com
+    o portal da partnership (print + planilha do Henrique). São 2 contratos (rodadas 4/2024 e 6/2025): pagamento
+    mínimo = saldo devedor (com juros) ÷ parcelas faltantes; juros ~1,11% a.m. (varia 0,83–1,28%) → o mínimo sobe
+    ~1%/mês; o Henrique paga o mínimo **arredondado ao múltiplo de R$ 50**. Mínimo de nov/26 = R$ 4.461,79 (app: 4.500).
+    O 1º contrato termina em abr/27, o 2º em mai/28. **Regra (estimativa conservadora): valor do mês = o MAIOR entre o
+    que o app tinha e o cronograma.** Nov/26 a mai/27 ficaram como estavam (4.500, 4.600…4.800); **abr e mai/27 em
+    4.800 de propósito:** a última parcela do 1º contrato (referente a abril) é paga em maio. Jun/27 a mai/28 subiram
+    de 2.900…3.250 (parados, sem juros) para 3.300…3.750 (mai/28 = última parcela, saldo restante arredondado pra
+    cima). Total nov/26–mai/28: R$ 69.900 → R$ 74.550; piso de caixa (CDI 0,8%) R$ 170,4 mil → R$ 165,6 mil, sem zerar.
+    **Em aberto:** se a última parcela do 2º contrato (ref. mai/28) também for paga no mês seguinte, jun/28 ganha
+    ~R$ 3,7 mil — hoje o app encerra a Sociedade em mai/28.
 
 ## Bugs corrigidos que não podem voltar
 
@@ -185,7 +196,8 @@ mês a mês (valor exato, sem reajuste).
   **Checkpoint do mês = soma das faturas dos DOIS cartões** (critério de set e out/26).
   Correções entram por migração com flag própria. **Nov/2026: conferência concluída** (Itaú item 12, XP item 13; checkpoint
   R$ 17.961,41 certo). A senha dos PDFs o Henrique informa
-  a cada fatura (não registrar aqui, o repositório é público); leitura via `pdftotext -upw <senha>` (Git for Windows). **Próxima: faturas de dez/2026.**
+  a cada fatura (não registrar aqui, o repositório é público); leitura via `pdftotext -upw <senha>` (Git for Windows). **Próxima: faturas de dez/2026.** Conferir também o
+  pagamento mínimo do mês no portal da partnership contra o item "Sociedade" do app (item 14 das migrações).
 - (adicionar aqui conforme as sessões avançarem)
 
 ## Segurança — login obrigatório (decisão 08/09/2026, v2026-09-08f)
