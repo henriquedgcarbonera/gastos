@@ -32,7 +32,7 @@ para texto claro (senão a legenda fica ilegível no fundo escuro).
 | Prazo Definido | Despesas temporárias com mês de fim (Sociedade, Consórcio, Ozzy, Aluguel, Financiamento…) |
 | Parcelas (Cartão) | Parcelamentos; panorama de quanto fecha por mês; `qtdParcelas` é a única fonte de verdade |
 | Reforma do Apto | Itens a comprar / já lançados, com vínculo ao pagamento (parcelado → Parcelas; à vista/boleto → Prazo Definido); mostra "2/10", valor já pago, editar/desfazer lançamento |
-| Aplicações | Saldo base, saldo real de fechamento mensal, CDI, salários mensais + salário de referência para projeção, evolução mês a mês (projetado × atualizado × real) |
+| Aplicações | Saldo base, saldo real de fechamento mensal, CDI, salários mensais + salário de referência para projeção, evolução mês a mês (projetado × atualizado × real). **Segunda análise (v2026-11-18a):** painel logo abaixo, com gráfico próprio "sobra do salário vira aporte" (linha sem aporte × com aporte, barras de sobra/falta dos meses projetados, cards de aporte acumulado/saldo final/ganho/1º mês com sobra), horizonte próprio (padrão +5 anos) e o mesmo mês inicial do gráfico de cima; o gráfico e a tabela originais não mudaram |
 
 Header: configurar sincronização · restaurar backup automático · exportar/importar backup JSON.
 
@@ -64,7 +64,15 @@ mês a mês (valor exato, sem reajuste).
 
 - `computeMes(mes)` soma: recorrentes + prazo definido + parcelas ativas + cartão avulso (+ reforma via vínculos).
 - `faltaOuSobraMes` = salários (Henrique + Juliana) − custo do mês. **Só o que falta sai das aplicações;
-  sobra não é aportada automaticamente** (decisão do Henrique).
+  sobra não é aportada automaticamente** (decisão do Henrique). O gráfico principal e a tabela seguem assim. A **segunda
+  análise** (aba Aplicações, `computeSaldoMemo(mes, cache, aporta)` e `renderInvestimentosAporte`) mostra o cenário
+  alternativo em que a sobra entra na reserva no fim do mês, com as mesmas premissas (âncora no último saldo real,
+  `taxaCdiMes`, `faltaOuSobraMes` com Sociedade/parcelas/salários); com `aporta=false` ela reproduz exatamente o
+  "Saldo atualizado". Aporte só conta nos meses depois do último saldo real. Referência (backup de 09/11, saldo real
+  nov/26 R$ 229 mil, CDI 0,8%): 1ª sobra em jun/2028 (fim da Sociedade); em 5 anos (nov/2031) R$ 234,3 mil sem aporte
+  × R$ 334,0 mil com aporte (R$ 84,9 mil aportados). Horizontes longos só dão ordem de grandeza (custos e salário
+  parados em valor de hoje, juros compostos); a sobra usa o avulso-base de R$ 3.000 — se o consumo real seguir ~R$ 3,7
+  mil, a sobra mensal cai ~R$ 700.
 - **Saldo projetado** (`computeSaldoInvestido`): parte do saldo base de jan/2026, aplica CDI mês a mês,
   desconta só o que faltou. Usa **sempre o salário de referência** → estável, só muda se mudar a referência/base.
 - **Saldo atualizado** (`computeSaldoAtualizado`): igual, mas reparte do **saldo real mais recente lançado**,

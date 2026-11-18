@@ -390,6 +390,23 @@ body:not(.autenticado) #loginGate{display:flex;}
       <div class="muted" id="backtestResumo" style="margin-top:10px;font-size:13px;"></div>
       <table id="tblInvestimentos" style="margin-top:14px;"></table>
     </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">Segunda análise — sobra do salário vira aporte</h2>
+        <select id="selAporteHorizonte" style="width:auto;">
+          <option value="12">+1 ano</option>
+          <option value="24">+2 anos</option>
+          <option value="36">+3 anos</option>
+          <option value="60" selected>+5 anos</option>
+          <option value="120">+10 anos</option>
+          <option value="420">Até o fim do financiamento</option>
+        </select>
+      </div>
+      <p class="muted" style="font-size:13px;">Começa no mesmo mês do gráfico acima (o horizonte você escolhe ao lado). Aqui toda sobra do mês (salário − custo, quando positiva) entra na reserva como aporte e rende o CDI da projeção; as faltas saem da reserva como no gráfico acima. Parte do último saldo real lançado e usa as mesmas premissas já definidas (CDI fixo da projeção, Sociedade pelo cronograma do portal, parcelas conferidas com as faturas, salário de referência). O gráfico e a tabela acima continuam valendo "sem aporte".</p>
+      <div class="cards" id="aporteCards"></div>
+      <div class="chart-wrap"><canvas id="chartInvestAporte"></canvas></div>
+      <div class="muted" id="aporteNota" style="margin-top:10px;font-size:13px;"></div>
+    </div>
   </div>
 </main>
 <footer>Todos os dados ficam salvos localmente no seu navegador. Use "Exportar backup" para guardar uma cópia de segurança.</footer>
@@ -438,7 +455,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-16b';
+const APP_VERSAO = '2026-11-18a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -2539,6 +2556,7 @@ function renderInvestimentos(){
     if(chartInvest){ chartInvest.destroy(); chartInvest=null; }
     document.getElementById('tblInvestimentos').innerHTML = `<tr><td colspan="9" class="muted">Defina o saldo base acima pra ver a evolução mês a mês.</td></tr>`;
     document.getElementById('backtestResumo').textContent = '';
+    renderInvestimentosAporte(null);
     return;
   }
   const inicioPadrao = monthAdd(hoje, -12);
@@ -2627,6 +2645,113 @@ function renderInvestimentos(){
     return `<tr${destaque}><td>${formatMes(e.mes)}</td><td style="text-align:right;">${fmtBRL(e.salario)}</td><td style="text-align:right;">${fmtBRL(e.custo)}</td><td style="text-align:right;color:${cor};">${e.diferenca<0?'−':'+'}${fmtBRL(Math.abs(e.diferenca))}</td><td style="text-align:right;">${temProjetado?fmtBRL(e.saldo):'<span class="muted">—</span>'}</td><td style="text-align:right;">${temReal?fmtBRL(e.saldoReal):'<span class="muted">—</span>'}</td><td style="text-align:right;color:${corDiff};">${diffRealProj!=null?(diffRealProj>=0?'+':'−')+fmtBRL(Math.abs(diffRealProj)):'<span class="muted">—</span>'}${pctDiff!=null?` <span class="muted">(${pctDiff>=0?'+':'−'}${Math.abs(pctDiff).toFixed(1)}%)</span>`:''}</td><td style="text-align:right;">${temAtualizado?fmtBRL(e.saldoAtualizado):'<span class="muted">—</span>'}</td></tr>`;
   }).join('');
   document.getElementById('tblInvestimentos').innerHTML = `<thead><tr><th>Mês</th><th style="text-align:right;">Salário total</th><th style="text-align:right;">Custo do mês</th><th style="text-align:right;">Diferença</th><th style="text-align:right;">Saldo projetado</th><th style="text-align:right;">Saldo real</th><th style="text-align:right;">Real − projetado</th><th style="text-align:right;">Saldo atualizado</th></tr></thead><tbody>${rows}</tbody>`;
+  renderInvestimentosAporte(inicioJanela, hoje);
+}
+
+/* ================== SEGUNDA ANÁLISE: SOBRA DO SALÁRIO VIRA APORTE ================== */
+/* O gráfico "Evolução mês a mês" segue a regra do Henrique: só a FALTA sai da
+   reserva e a sobra não é aportada. Esta análise mostra o cenário alternativo:
+   toda sobra do mês (salário − custo > 0) entra na reserva como aporte.
+   Mesmas premissas do saldo atualizado (nada é recalculado à parte): mesma
+   âncora (saldo real lançado mais recente até o mês; sem real, o saldo base),
+   mesmo CDI (taxaCdiMes), mesmo faltaOuSobraMes (Sociedade, parcelas,
+   salários...). O fluxo do mês entra no fim do mês, rendendo só o saldo
+   anterior — igual ao modelo atual. Memoizado: cada mês é calculado uma vez.
+   O horizonte tem seletor próprio porque a 1ª sobra só aparece depois do fim
+   da Sociedade (jun/2028), além da janela padrão do gráfico de cima. */
+let chartInvestAporte = null;
+let mesesProjecaoAporte = 60;
+document.getElementById('selAporteHorizonte').onchange=(e)=>{ mesesProjecaoAporte=parseInt(e.target.value); renderInvestimentos(); };
+/* aporta=false reproduz exatamente o "Saldo atualizado" (só a falta sai);
+   aporta=true também soma a sobra. */
+function computeSaldoMemo(mesAlvo, cache, aporta){
+  const cfg = STATE.investimentos || {};
+  const passo = (anterior, m) => {
+    if(anterior==null) return null;
+    const dif = faltaOuSobraMes(m).diferenca;
+    return anterior*(1+taxaCdiMes(m)/100) + (aporta ? dif : Math.min(0, dif));
+  };
+  const f = (m)=>{
+    if(m in cache) return cache[m];
+    let v;
+    const real = STATE.saldoReal.find(s=>s.mes===m);
+    if(real) v = real.valor;
+    else if(STATE.saldoReal.some(s=>s.mes<m)) v = passo(f(monthAdd(m,-1)), m);
+    else if(!cfg.mesInicial || cfg.saldoInicial==null || isNaN(cfg.saldoInicial) || m < cfg.mesInicial) v = null;
+    else if(m === cfg.mesInicial) v = cfg.saldoInicial;
+    else v = passo(f(monthAdd(m,-1)), m);
+    cache[m] = v;
+    return v;
+  };
+  return f(mesAlvo);
+}
+function renderInvestimentosAporte(inicioJanela, hoje){
+  const cardsEl = document.getElementById('aporteCards');
+  const notaEl = document.getElementById('aporteNota');
+  if(!inicioJanela){
+    if(chartInvestAporte){ chartInvestAporte.destroy(); chartInvestAporte = null; }
+    cardsEl.innerHTML = '';
+    notaEl.textContent = 'Defina o saldo base acima pra ver esta análise.';
+    return;
+  }
+  const meses = monthRange(inicioJanela, monthAdd(hoje, mesesProjecaoAporte));
+  const cacheSem = {}, cacheCom = {};
+  const evolucao = meses.map(m=>{
+    const real = STATE.saldoReal.find(s=>s.mes===m);
+    return { mes:m, diferenca: faltaOuSobraMes(m).diferenca, saldoReal: real ? real.valor : null,
+             sem: computeSaldoMemo(m, cacheSem, false), com: computeSaldoMemo(m, cacheCom, true) };
+  });
+  // Aporte só conta nos meses PROJETADOS (depois do último saldo real lançado);
+  // até lá o saldo é o real, que já inclui o que de fato aconteceu.
+  const reais = STATE.saldoReal.map(s=>s.mes).sort();
+  const ultimoReal = reais.length ? reais[reais.length-1] : STATE.investimentos.mesInicial;
+  const projetados = evolucao.filter(e=>e.mes > ultimoReal);
+  const aporteTotal = projetados.reduce((s,e)=>s+Math.max(0, e.diferenca), 0);
+  const retiradaTotal = projetados.reduce((s,e)=>s+Math.max(0, -e.diferenca), 0);
+  const fim = evolucao[evolucao.length-1];
+  // Primeiro mês com sobra — procura além da janela, até o fim do financiamento.
+  let primeiraSobra = null;
+  for(let i=1; i<=420 && !primeiraSobra; i++){
+    const m = monthAdd(ultimoReal, i);
+    if(faltaOuSobraMes(m).diferenca > 0) primeiraSobra = m;
+  }
+  const cards = [
+    { label:'Aporte acumulado no período (sobras)', value: fmtBRL(aporteTotal), cls:'green' },
+    { label:'Retiradas acumuladas no período (faltas)', value: fmtBRL(retiradaTotal), cls:'red' },
+    { label:'Saldo no fim do período — sem aporte', value: fim.sem!=null ? fmtBRL(fim.sem) : '—', cls:'' },
+    { label:'Saldo no fim do período — com aporte', value: fim.com!=null ? fmtBRL(fim.com) : '—', cls:'green' },
+    { label:'Ganho do aporte (sobras + rendimento)', value: (fim.sem!=null && fim.com!=null) ? fmtBRL(fim.com - fim.sem) : '—', cls:'green' },
+    { label:'Primeiro mês com sobra', value: primeiraSobra ? formatMes(primeiraSobra) : 'nenhum até o fim do financiamento', cls:'' },
+  ];
+  cardsEl.innerHTML = cards.map(c=>`<div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>`).join('');
+  notaEl.textContent = `CDI da projeção: ${CDI_PROJECAO_PCT.toFixed(2)}% a.m. · aportes contados só depois de ${formatMes(ultimoReal)} (último saldo real lançado); até lá as linhas mostram o saldo real e as barras ficam de fora. Horizontes muito longos são só ordem de grandeza: custos e salário ficam parados em valor de hoje e o rendimento é composto.`;
+
+  if(chartInvestAporte) chartInvestAporte.destroy();
+  chartInvestAporte = new Chart(document.getElementById('chartInvestAporte').getContext('2d'), {
+    data:{
+      labels: meses.map(formatMes),
+      datasets:[
+        // Barras só nos meses projetados: nos anteriores o fluxo já está dentro do
+        // saldo real (e uma saída grande, como ago/26, esticaria o eixo e
+        // esconderia as sobras, que são bem menores).
+        { type:'bar', label:'Sobra do mês (vira aporte)', data: evolucao.map(e=>(e.mes>ultimoReal && e.diferenca>0) ? e.diferenca : null), backgroundColor:'rgba(79,209,165,0.55)', yAxisID:'y', stack:'fluxo', order:2 },
+        { type:'bar', label:'Falta do mês (sai da reserva)', data: evolucao.map(e=>(e.mes>ultimoReal && e.diferenca<0) ? e.diferenca : null), backgroundColor:'rgba(240,97,107,0.55)', yAxisID:'y', stack:'fluxo', order:2 },
+        { type:'line', label:'Saldo atualizado — sem aporte (gráfico acima)', data: evolucao.map(e=>e.sem), borderColor:'#ffffff', backgroundColor:'#ffffff', tension:0.25, yAxisID:'y1', order:1, pointRadius:2, pointHoverRadius:5 },
+        { type:'line', label:'Saldo com aporte da sobra', data: evolucao.map(e=>e.com), borderColor:'#4fd1a5', backgroundColor:'#4fd1a5', tension:0.25, yAxisID:'y1', order:0, pointRadius:2, pointHoverRadius:5 },
+        { type:'line', label:'Saldo real (lançado)', data: evolucao.map(e=>e.saldoReal), borderColor:'#f2b94b', backgroundColor:'#f2b94b', borderDash:[5,4], spanGaps:true, yAxisID:'y1', order:0, pointRadius:4, pointHoverRadius:7 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{position:'bottom'}, tooltip:{mode:'index', intersect:false, callbacks:{label:(c)=>c.dataset.label+': '+(c.parsed.y!=null?fmtBRL(c.parsed.y):'—')}} },
+      scales:{
+        y:{ stacked:true, position:'left', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{color:'#2a3446'} },
+        y1:{ position:'right', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{display:false} },
+        x:{ stacked:true, ticks:{color:'#8b95a8', maxRotation:60, minRotation:60}, grid:{display:false} }
+      }
+    }
+  });
 }
 
 /* ================== BACKUP ================== */
