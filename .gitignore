@@ -1,0 +1,11 @@
+# Privado — nunca versionar (o repositório é público)
+CLAUDE.local.md
+HISTORICO-PRIVADO.md
+.privacidade.txt
+.secrets/
+tmp/
+
+# Dados financeiros
+*.pdf
+*backup*.json
+estado-*.json

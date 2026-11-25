@@ -1,0 +1,2510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Gastos — Fluxo Financeiro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<style>
+:root{
+  --bg:#0f1420; --panel:#171e2e; --panel2:#1e2636; --border:#2a3446;
+  --text:#e8ecf4; --muted:#8b95a8; --accent:#4fd1a5; --accent2:#5b8def;
+  --red:#f0616b; --yellow:#f2b94b; --radius:12px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+header{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+header h1{font-size:19px;margin:0;font-weight:600;}
+header .sub{color:var(--muted);font-size:13px;margin-top:2px;}
+nav{display:flex;gap:4px;padding:0 28px;border-bottom:1px solid var(--border);overflow-x:auto;background:var(--panel);}
+nav button{background:none;border:none;color:var(--muted);padding:14px 16px;cursor:pointer;font-size:14px;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500;}
+nav button:hover{color:var(--text);}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
+main{padding:24px 28px 60px;max-width:1200px;margin:0 auto;}
+.tab{display:none;}
+.tab.active{display:block;}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+.card .label{color:var(--muted);font-size:12.5px;margin-bottom:6px;}
+.card .value{font-size:22px;font-weight:700;}
+.card .value.red{color:var(--red);}
+.card .value.green{color:var(--accent);}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.panel h2{margin:0 0 14px;font-size:15px;font-weight:600;}
+.panel h3{margin:18px 0 10px;font-size:13.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.month-nav button{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;}
+.month-nav button:hover{border-color:var(--accent);}
+.month-nav select{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;font-size:14px;font-weight:600;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{text-align:left;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+td{padding:8px 10px;border-bottom:1px solid var(--border);}
+tr:hover td{background:rgba(255,255,255,0.02);}
+tr.total-row td{font-weight:700;border-top:2px solid var(--border);border-bottom:none;}
+input[type=text],input[type=number],input[type=date],input[type=month],select,textarea{
+  background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:13.5px;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);}
+.btn{background:var(--accent);color:#0b1410;border:none;padding:9px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13.5px;}
+.btn:hover{opacity:.9;}
+.btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border);}
+.btn.danger{background:transparent;color:var(--red);border:1px solid var(--red);padding:5px 10px;font-size:12.5px;}
+.btn.small{padding:5px 10px;font-size:12.5px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;align-items:end;margin-bottom:16px;}
+.form-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+.pill.pago{background:rgba(79,209,165,.15);color:var(--accent);}
+.pill.planejado{background:rgba(242,185,75,.15);color:var(--yellow);}
+.actions{display:flex;gap:6px;}
+.chart-wrap{position:relative;height:280px;}
+.muted{color:var(--muted);}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;}
+@media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+.rec-group{margin-bottom:6px;}
+.hist-tag{display:inline-block;background:var(--panel2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;font-size:12px;margin:2px 4px 2px 0;color:var(--muted);}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.search{max-width:260px;}
+::-webkit-scrollbar{height:8px;width:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:12px 18px;border-radius:10px;font-size:13.5px;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:99;}
+.toast.show{opacity:1;transform:translateY(0);}
+.link-cell a{color:var(--accent2);text-decoration:none;font-size:12px;}
+.tag-status{cursor:pointer;}
+body:not(.autenticado) header, body:not(.autenticado) nav, body:not(.autenticado) main{display:none;}
+#loginGate{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;}
+body:not(.autenticado) #loginGate{display:flex;}
+.login-box{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:340px;}
+.login-box h1{font-size:18px;margin:0 0 4px;}
+.login-box p{color:var(--muted);font-size:13px;margin:0 0 20px;}
+.login-box label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+.login-box .form-field{margin-bottom:14px;}
+.login-box .btn{width:100%;margin-top:6px;}
+.login-box .erro{color:var(--red);font-size:12.5px;margin-top:10px;min-height:16px;}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="login-box">
+    <h1>💰 Controle de Gastos</h1>
+    <p>Entre com a conta Google autorizada pra acessar os dados.</p>
+    <button type="button" class="btn" id="btnLoginGoogle">Entrar com Google</button>
+    <div class="erro" id="loginErro"></div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>💰 Controle de Gastos</h1>
+    <div class="sub">Fluxo financeiro pessoal — atualize sempre que houver mudanças <span class="muted" id="appVersao" style="font-size:11px;"></span> <span id="avisoVersao" class="pill" style="display:none;background:rgba(240,97,107,.18);color:var(--red);margin-left:6px;"></span> <span id="syncStatus" class="pill planejado" style="margin-left:8px;">⚪ Sincronização não configurada</span></div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn secondary small" id="btnSync">🔄 Configurar sincronização</button>
+    <button class="btn secondary small" id="btnRestoreCloud">🕐 Restaurar backup automático</button>
+    <button class="btn secondary small" id="btnExport">⬇ Exportar backup</button>
+    <button class="btn secondary small" id="btnImport">⬆ Importar backup</button>
+    <input type="file" id="fileImport" accept="application/json" style="display:none;">
+    <button class="btn secondary small" id="btnLogout">🚪 Sair (<span id="usuarioLogado"></span>)</button>
+  </div>
+</header>
+
+<nav id="tabNav">
+  <button data-tab="dashboard" class="active">Dashboard</button>
+  <button data-tab="lancamentos">Lançamentos (Cartão)</button>
+  <button data-tab="recorrentes">Recorrentes</button>
+  <button data-tab="temporarios">Prazo Definido</button>
+  <button data-tab="parcelas">Parcelas (Cartão)</button>
+  <button data-tab="apto">Reforma do Apto</button>
+  <button data-tab="investimentos">Aplicações</button>
+</nav>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <div class="tab active" id="tab-dashboard">
+    <div class="month-nav">
+      <button id="prevMes">‹</button>
+      <select id="selMes"></select>
+      <button id="nextMes">›</button>
+      <span class="muted" id="mesHoje" style="margin-left:8px;"></span>
+    </div>
+    <div class="cards" id="kpiCards"></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="toolbar">
+          <h2 style="margin:0;">Evolução mensal (total gasto)</h2>
+          <div style="display:flex;gap:8px;">
+            <select id="selInicio" style="width:auto;">
+              <option value="12m" selected>Últimos 12 meses</option>
+              <option value="inicio">Desde o início</option>
+            </select>
+            <select id="selProjecao" style="width:auto;">
+              <option value="6">+6 meses</option>
+              <option value="12" selected>+1 ano</option>
+              <option value="24">+2 anos</option>
+              <option value="36">+3 anos</option>
+              <option value="60">+5 anos</option>
+              <option value="120">+10 anos</option>
+              <option value="420">Até o fim do financiamento</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartMensal"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>Composição do mês selecionado</h2>
+        <div class="chart-wrap"><canvas id="chartPizza"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Detalhamento do mês selecionado</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Clique numa categoria (na tabela ou no gráfico) pra ver os itens que compõem o valor.</p>
+      <table id="tblDetalheMes"></table>
+    </div>
+    <div class="panel" id="painelCategoria" style="display:none;">
+      <h2 id="tituloCategoria">Itens da categoria</h2>
+      <table id="tblCategoria"></table>
+    </div>
+  </div>
+
+  <!-- LANÇAMENTOS -->
+  <div class="tab" id="tab-lancamentos">
+    <div class="panel">
+      <h2>Consumo mensal do cartão (avulso, não parcelado)</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Gasto corrido do cartão ao longo do mês (compras do dia a dia, sem parcelamento). Registre a soma das faturas quando quiser: o app desconta as assinaturas e parcelas do mês e leva o consumo real do registro mais recente para o <b>consumo do mês</b> (e para o Dashboard). Mês sem valor lançado assume a estimativa de R$ 3.000,00, que também é o orçamento de comparação. Se a fatura parcial ainda não trouxe todas as assinaturas/parcelas, o consumo aparece menor que o real.</p>
+      <div class="month-nav">
+        <button id="prevMesCartao">‹</button>
+        <select id="selMesCartao"></select>
+        <button id="nextMesCartao">›</button>
+      </div>
+      <h3 id="ckTitulo" style="margin-top:4px;">Acompanhamento do consumo</h3>
+      <div class="form-grid">
+        <div><label>Data do registro</label><input type="date" id="ckData"></div>
+        <div><label>Valor informado (R$)</label><input type="number" min="0" step="0.01" id="ckValor" placeholder="0,00"></div>
+        <div><label>O valor é…</label><select id="ckTipo"><option value="fatura">Soma das faturas (desconta assinaturas e parcelas)</option><option value="consumo">Consumo já apurado (sem descontar)</option></select></div>
+        <div><button class="btn" id="btnAddCk" style="width:100%;">+ Registrar checkpoint</button></div>
+      </div>
+      <div class="cards" id="ckCards" style="margin-top:14px;"></div>
+      <div id="ckBarra" style="height:10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:6px;"><div id="ckBarraFill" style="height:100%;width:0;"></div></div>
+      <div class="muted" id="ckAviso" style="font-size:12.5px;min-height:16px;"></div>
+      <table id="tblCheckpoints" style="margin-top:10px;"></table>
+      <h3>Ajuste manual do consumo do mês</h3>
+      <div class="form-grid" style="max-width:320px;">
+        <div><label>Consumo do mês (R$)</label><input type="number" step="0.01" id="cartaoMesValor"></div>
+        <div><button class="btn" id="btnSalvarCartaoMes" style="width:100%;">Salvar</button></div>
+      </div>
+      <table id="tblCartaoMensal" style="margin-top:14px;"></table>
+    </div>
+    <div class="panel">
+      <h2 id="tituloFormLan">Adicionar nova compra no cartão</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">A compra pode cair na fatura do mês seguinte (depende do fechamento do cartão). O que conta pros cálculos é sempre o <b>mês do pagamento</b> (1ª parcela), não a data da compra.</p>
+      <div class="form-grid">
+        <div><label>Data da compra (opcional)</label><input type="date" id="lanData"></div>
+        <div><label>Mês do pagamento (1ª parcela)</label><input type="month" id="lanMesPagamento"></div>
+        <div><label>Descrição</label><input type="text" id="lanDesc" placeholder="ex: Tênis Nike"></div>
+        <div><label>Categoria</label><input type="text" id="lanCat" placeholder="ex: Vestuário" list="catList"><datalist id="catList"></datalist></div>
+        <div><label>Valor total da compra (R$)</label><input type="number" step="0.01" id="lanValorTotal" placeholder="0,00"></div>
+        <div><label>Qtd. parcelas</label><input type="number" min="1" step="1" id="lanQtd" value="1"></div>
+        <div><label>Valor da parcela (R$)</label><input type="number" step="0.01" id="lanValor" placeholder="calculado automaticamente"></div>
+        <div style="display:flex;gap:6px;"><button class="btn" id="btnAddLan" style="width:100%;">+ Adicionar</button><button class="btn secondary" id="btnCancelEditLan" style="display:none;">Cancelar</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">Lançamentos registrados</h2>
+        <input type="text" class="search" id="searchLan" placeholder="Buscar por descrição/categoria...">
+      </div>
+      <table id="tblLancamentos"></table>
+    </div>
+  </div>
+
+  <!-- RECORRENTES -->
+  <div class="tab" id="tab-recorrentes">
+    <div class="panel">
+      <h2>Adicionar novo item recorrente</h2>
+      <div class="form-grid">
+        <div><label>Nome</label><input type="text" id="recNome" placeholder="ex: Streaming X"></div>
+        <div><label>Grupo</label><input type="text" id="recGrupo" placeholder="ex: Assinaturas/Cartão" list="grupoList"><datalist id="grupoList"></datalist></div>
+        <div><label>Valor mensal (R$)</label><input type="number" step="0.01" id="recValor"></div>
+        <div><label>Vigente desde</label><input type="month" id="recMes"></div>
+        <div><button class="btn" id="btnAddRec" style="width:100%;">+ Adicionar</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Itens recorrentes (mensalidades, assinaturas, fixos)</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">O valor de cada item vale para os meses seguintes até que uma nova alteração seja registrada. Clique em "Alterar valor" quando o valor mudar (ex: reajuste de aluguel, plano de saúde etc).</p>
+      <div id="recorrentesList"></div>
+    </div>
+  </div>
+
+  <!-- DESPESAS COM PRAZO DEFINIDO -->
+  <div class="tab" id="tab-temporarios">
+    <div class="panel">
+      <h2>Adicionar despesa com prazo definido</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Use isso para gastos que valem só durante um período (ex: sociedade, obra, empréstimo com data pra acabar) — diferente da aba Recorrentes, aqui o valor <b>para de contar automaticamente</b> depois do mês final.</p>
+      <div class="form-grid">
+        <div><label>Nome</label><input type="text" id="tmpNome" placeholder="ex: Sociedade"></div>
+        <div><label>Grupo</label><input type="text" id="tmpGrupo" placeholder="ex: Fixos" list="grupoList"></div>
+        <div><label>Valor mensal (R$)</label><input type="number" step="0.01" id="tmpValor"></div>
+        <div><label>Mês início</label><input type="month" id="tmpMesInicio"></div>
+        <div><label>Mês fim (opcional)</label><input type="month" id="tmpMesFim"></div>
+        <div><button class="btn" id="btnAddTmp" style="width:100%;">+ Adicionar</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Despesas com prazo definido cadastradas</h2>
+      <table id="tblTemporarios"></table>
+    </div>
+  </div>
+
+  <!-- PARCELAS (CARTÃO) -->
+  <div class="tab" id="tab-parcelas">
+    <div class="panel">
+      <p class="muted" style="font-size:13px;">Compras parceladas no cartão — inclui as já lançadas na planilha original e as que você mandar direto da aba <b>Reforma do Apto</b> quando marcar um item como "parcelado no cartão". Para novas compras avulsas, use a aba <b>Lançamentos (Cartão)</b>.</p>
+      <div class="month-nav">
+        <button id="prevMesParcelas">‹</button>
+        <select id="selMesParcelas"></select>
+        <button id="nextMesParcelas">›</button>
+        <span class="muted" style="margin-left:8px;">panorama do mês</span>
+      </div>
+      <div class="cards" id="parcelasCards"></div>
+      <table id="tblParcelasMes" style="margin-top:10px;"></table>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">Parcelamentos</h2>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);"><input type="checkbox" id="onlyActiveParcelas" checked style="width:auto;"> mostrar só ativos</label>
+      </div>
+      <table id="tblParcelas"></table>
+    </div>
+  </div>
+
+  <!-- APTO -->
+  <div class="tab" id="tab-apto">
+    <div class="cards" id="aptoCards"></div>
+    <div class="panel">
+      <h2>Adicionar item da reforma</h2>
+      <div class="form-grid">
+        <div><label>Categoria</label><input type="text" id="aptoCat"></div>
+        <div><label>Ambiente</label><input type="text" id="aptoAmb"></div>
+        <div><label>Item</label><input type="text" id="aptoItem"></div>
+        <div><label>Valor total (R$)</label><input type="number" step="0.01" id="aptoTotal"></div>
+        <div><label>Loja</label><input type="text" id="aptoLoja"></div>
+        <div><button class="btn" id="btnAddApto" style="width:100%;">+ Adicionar</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">A comprar / lançar pagamento</h2>
+        <input type="text" class="search" id="searchApto" placeholder="Buscar item...">
+      </div>
+      <p class="muted" style="font-size:13px;margin-top:-6px;">Use "Lançar pagamento" pra mandar o item pro fluxo de caixa: parcelado no cartão vai pra aba <b>Parcelas (Cartão)</b>; à vista ou boleto (ex: em 4x) vai pra aba <b>Prazo Definido</b>.</p>
+      <table id="tblAptoPendente"></table>
+    </div>
+    <div class="panel">
+      <h2>Já lançados</h2>
+      <p class="muted" style="font-size:13px;margin-top:-6px;">"Valor pago até agora" considera só as parcelas/boletos que já venceram, não o valor total do item.</p>
+      <table id="tblAptoLancado"></table>
+    </div>
+  </div>
+
+  <!-- APLICAÇÕES -->
+  <div class="tab" id="tab-investimentos">
+    <div class="cards" id="investCards"></div>
+    <div class="panel">
+      <h2>Saldo base das aplicações</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Defina o valor que você tem aplicado hoje e a partir de qual mês contar. A partir daí, o saldo rende sozinho pelo CDI e desconta o que faltar no mês (quando o custo passa do salário).</p>
+      <div class="form-grid">
+        <div><label>Mês de referência</label><input type="text" id="investMesBase" placeholder="AAAA-MM"></div>
+        <div><label>Saldo aplicado nesse mês (R$)</label><input type="number" step="0.01" id="investSaldoBase"></div>
+        <div><button class="btn" id="btnSetSaldoBase" style="width:100%;">Definir saldo base</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Saldo real das aplicações (fechamento do mês)</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">No fechamento de cada mês, lance aqui o saldo real que aparece no extrato/aplicação — assim dá pra comparar com o projetado (rendimento do CDI - o que faltou no mês) e ver se está batendo. Também dá pra voltar em meses passados e ir alimentando um histórico recente, mesmo antes do saldo base.</p>
+      <div class="month-nav">
+        <button id="prevMesSaldoReal">‹</button>
+        <select id="selMesSaldoReal"></select>
+        <button id="nextMesSaldoReal">›</button>
+      </div>
+      <div class="form-grid" style="max-width:320px;">
+        <div><label>Saldo real no fechamento (R$)</label><input type="number" step="0.01" id="saldoRealMesValor"></div>
+        <div><button class="btn" id="btnSalvarSaldoReal" style="width:100%;">Salvar</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Taxa do CDI</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Busca automática direto do Banco Central: cada mês passado usa o CDI real daquele mês, e os meses futuros usam o último valor conhecido como referência.</p>
+      <div id="cdiAtual" style="margin-bottom:8px;"></div>
+      <button class="btn secondary" id="btnAtualizarCDI">🔄 Atualizar CDI (Banco Central)</button>
+    </div>
+    <div class="panel">
+      <h2>Salários mensais</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Como o salário varia todo mês, lance o valor de cada um mês a mês (igual ao consumo do cartão) — não precisa reajuste, só o valor daquele mês mesmo.</p>
+      <div class="month-nav">
+        <button id="prevMesSalario">‹</button>
+        <select id="selMesSalario"></select>
+        <button id="nextMesSalario">›</button>
+      </div>
+      <div class="form-grid" style="max-width:420px;">
+        <div><label>Salário Henrique (R$)</label><input type="number" step="0.01" id="salarioMesHenrique"></div>
+        <div><label>Salário Juliana (R$)</label><input type="number" step="0.01" id="salarioMesJuliana"></div>
+        <div><button class="btn" id="btnSalvarSalarioMes" style="width:100%;">Salvar</button></div>
+      </div>
+      <div class="cards" id="salarioCards" style="margin-top:10px;"></div>
+    </div>
+    <div class="panel">
+      <h2>Salário referência para projeção futura</h2>
+      <p class="muted" style="margin-top:-6px;font-size:13px;">Usado nos meses futuros que ainda não têm valor lançado (ex: se espera um reajuste em breve). Sem isso definido, a projeção usa o último salário lançado.</p>
+      <div class="form-grid" style="max-width:420px;">
+        <div><label>Referência Henrique (R$)</label><input type="number" step="0.01" id="salarioRefHenrique"></div>
+        <div><label>Referência Juliana (R$)</label><input type="number" step="0.01" id="salarioRefJuliana"></div>
+        <div><button class="btn" id="btnSalvarSalarioRef" style="width:100%;">Salvar referência</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">Evolução mês a mês</h2>
+        <div style="display:flex;gap:8px;">
+          <select id="selInicioInvest" style="width:auto;">
+            <option value="12m" selected>Últimos 12 meses</option>
+            <option value="inicio">Desde o início</option>
+          </select>
+          <select id="selProjecaoInvest" style="width:auto;">
+            <option value="6">+6 meses</option>
+            <option value="12" selected>+1 ano</option>
+            <option value="24">+2 anos</option>
+            <option value="36">+3 anos</option>
+            <option value="60">+5 anos</option>
+            <option value="120">+10 anos</option>
+            <option value="420">Até o fim do financiamento</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartInvest"></canvas></div>
+      <div class="muted" id="backtestResumo" style="margin-top:10px;font-size:13px;"></div>
+      <table id="tblInvestimentos" style="margin-top:14px;"></table>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0;">Segunda análise — sobra do salário vira aporte</h2>
+        <select id="selAporteHorizonte" style="width:auto;">
+          <option value="12">+1 ano</option>
+          <option value="24">+2 anos</option>
+          <option value="36">+3 anos</option>
+          <option value="60" selected>+5 anos</option>
+          <option value="120">+10 anos</option>
+          <option value="420">Até o fim do financiamento</option>
+        </select>
+      </div>
+      <p class="muted" style="font-size:13px;">Começa no mesmo mês do gráfico acima (o horizonte você escolhe ao lado). Aqui toda sobra do mês (salário − custo, quando positiva) entra na reserva como aporte e rende o CDI da projeção; as faltas saem da reserva como no gráfico acima. Parte do último saldo real lançado e usa as mesmas premissas já definidas (CDI fixo da projeção, Sociedade pelo cronograma do portal, parcelas conferidas com as faturas, salário de referência). O gráfico e a tabela acima continuam valendo "sem aporte".</p>
+      <div class="cards" id="aporteCards"></div>
+      <div class="chart-wrap"><canvas id="chartInvestAporte"></canvas></div>
+      <div class="muted" id="aporteNota" style="margin-top:10px;font-size:13px;"></div>
+      <h3 style="margin:18px 0 6px;">Entradas extraordinárias previstas</h3>
+      <p class="muted" style="font-size:13px;margin-top:0;">Dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação, restituição). Valores líquidos de IR. Entram só nesta segunda análise (★ no gráfico); o gráfico de cima segue sem elas. Suposições ficam marcadas em amarelo.</p>
+      <div class="form-grid">
+        <div><label>Mês</label><input type="month" id="entMes"></div>
+        <div><label>Descrição</label><input type="text" id="entDesc" placeholder="ex: Bônus"></div>
+        <div><label>Valor líquido (R$)</label><input type="number" step="0.01" id="entValor"></div>
+        <div><label>Tipo</label><select id="entTipo"><option value="suposicao">Suposição</option><option value="confirmada">Confirmada</option></select></div>
+        <div><button class="btn" id="btnAddEntrada" style="width:100%;">+ Adicionar</button></div>
+      </div>
+      <table id="tblEntradasPrevistas" style="margin-top:12px;"></table>
+    </div>
+  </div>
+</main>
+<footer>Todos os dados ficam salvos localmente no seu navegador. Use "Exportar backup" para guardar uma cópia de segurança.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED = {"recorrentes": [], "parcelas": [], "cartaoAvulso": [], "aptoPlanejado": [], "aptoPago": [], "iluminacao": [], "lancamentos": []};
+;
+</script>
+<script>
+/* ================== ESTADO / PERSISTÊNCIA ================== */
+const STORAGE_KEY = 'gastosApp_v1';
+let STATE = null;
+
+/* Garante que todo campo esperado exista em um objeto de estado, mesmo que
+   ele venha incompleto — seja de uma versão mais antiga do app salva no
+   navegador, seja do Firebase (que "esquece" arrays vazios ao salvar, ex:
+   lancamentos:[] não fica gravado no banco e volta undefined na leitura).
+   Evita telas em branco por causa de STATE.algumCampo.forEach em undefined. */
+function sanitizeState(obj){
+  const base = JSON.parse(JSON.stringify(SEED));
+  const merged = Object.assign({}, base, obj);
+  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints','entradasPrevistas'].forEach(k=>{
+    if(!Array.isArray(merged[k])) merged[k] = Array.isArray(base[k]) ? base[k] : [];
+  });
+  if(!merged.investimentos || typeof merged.investimentos!=='object'){
+    merged.investimentos = { saldoInicial:null, mesInicial:null };
+  }
+  if(merged.investimentos.salarioRefHenrique===undefined) merged.investimentos.salarioRefHenrique = null;
+  if(merged.investimentos.salarioRefJuliana===undefined) merged.investimentos.salarioRefJuliana = null;
+  return merged;
+}
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{ return sanitizeState(JSON.parse(raw)); }catch(e){ console.warn('erro ao carregar estado salvo, usando seed', e); }
+  }
+  return sanitizeState(JSON.parse(JSON.stringify(SEED)));
+}
+/* _syncTs é o carimbo de "última EDIÇÃO DO USUÁRIO" — é ele que decide,
+   na sincronização, qual estado (local ou Firebase) é o mais novo. Por isso
+   só saveState() normal (chamado por lançar/editar/apagar) atualiza esse
+   carimbo. Gravações automáticas do próprio app (migrações, CDI) usam
+   saveStateInterno(): salvam e enviam, mas NÃO mexem no carimbo. Antes,
+   uma migração rodando ao abrir o arquivo num navegador novo carimbava o
+   estado local como "recém-editado" e ele vencia o Firebase — apagando os
+   lançamentos feitos no outro computador (ex: consumo do cartão de set/26
+   voltando pro valor base). */
+const APP_VERSAO = '2026-11-25b';
+/* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
+   cada estado (diagnóstico de perda de dados). */
+function dispositivoId(){
+  let id = localStorage.getItem('gastosApp_dispositivo');
+  if(!id){ id = (navigator.platform||'pc').replace(/\s+/g,'')+'-'+Math.random().toString(36).slice(2,6); localStorage.setItem('gastosApp_dispositivo', id); }
+  return id;
+}
+function saveState(opts){
+  opts = opts||{};
+  if(!opts.interno) STATE._syncTs = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+  syncPushToFirebase(opts.motivo || (opts.interno ? 'automatico' : 'edicao'));
+}
+function saveStateInterno(motivo){ saveState({interno:true, motivo: motivo||'automatico'}); }
+STATE = loadState();
+
+/* Garante que TODO texto dos gráficos (legenda, eixos, tooltip) siga a
+   paleta escura do projeto por padrão — sem isso, o Chart.js usa um cinza
+   escuro padrão que fica ilegível em cima do fundo escuro do app. */
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.color = '#e8ecf4';
+  Chart.defaults.borderColor = '#2a3446';
+  if(Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels){
+    Chart.defaults.plugins.legend.labels.color = '#e8ecf4';
+  }
+}
+
+/* ================== SINCRONIZAÇÃO ENTRE DISPOSITIVOS (FIREBASE) ==================
+   Duas pessoas em computadores diferentes podem compartilhar os mesmos dados.
+   Configure uma vez em cada computador clicando em "Configurar sincronização"
+   e colando o mesmo "firebaseConfig" nos dois (veja instruções que o Claude
+   passou). A partir daí, qualquer alteração feita por um aparece pro outro
+   sozinha (o app fica escutando mudanças em tempo real). */
+const SYNC_CONFIG_KEY = 'gastosApp_syncConfig';
+let syncEnabled = false;
+let syncApplyingRemote = false; // evita re-enviar de volta o que acabou de chegar
+let firebaseDbRef = null;
+
+/* Config padrão do projeto Firebase já criado — assim nem você nem sua
+   esposa precisam colar nada manualmente, os dois já sincronizam de cara
+   ao abrir o arquivo. Se um dia precisar trocar de projeto, use o botão
+   "Configurar sincronização" pra sobrescrever. */
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZqDsboz1FSPNQf_-9PFye_7ZuM4ZI_I",
+  authDomain: "gastos-mensais-3e39a.firebaseapp.com",
+  databaseURL: "https://gastos-mensais-3e39a-default-rtdb.firebaseio.com",
+  projectId: "gastos-mensais-3e39a",
+  storageBucket: "gastos-mensais-3e39a.firebasestorage.app",
+  messagingSenderId: "88537286531",
+  appId: "1:88537286531:web:fbae2d48b8514f0e2bd8b6"
+};
+function getSyncConfig(){
+  const raw = localStorage.getItem(SYNC_CONFIG_KEY);
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.disabled) return null;
+      return parsed;
+    }catch(e){ /* ignora e usa o padrão */ }
+  }
+  return DEFAULT_FIREBASE_CONFIG;
+}
+function setSyncStatus(texto, classe){
+  const el = document.getElementById('syncStatus');
+  el.textContent = texto;
+  el.className = 'pill '+classe;
+}
+/* Retorna uma Promise que só resolve depois que o app já comparou o estado
+   local com o do Firebase e ficou com o mais recente dos dois. É crucial
+   que qualquer coisa que possa disparar um saveState() automático (como a
+   atualização do CDI ao abrir o arquivo) espere essa Promise primeiro —
+   senão corre o risco de salvar/empurrar pro Firebase um STATE local ainda
+   desatualizado (de antes de puxar as mudanças do outro computador) e
+   apagar por cima dados mais novos que a outra pessoa acabou de lançar.
+   Foi exatamente isso que estava causando perda de lançamentos: a busca do
+   CDI no Banco Central e a busca do estado no Firebase são as duas
+   assíncronas e corriam em paralelo — se o CDI respondesse primeiro, ele
+   salvava (e sincronizava) o STATE antigo antes da mesclagem terminar. */
+function initFirebaseSync(){
+  const config = getSyncConfig();
+  if(!config){ setSyncStatus('⚪ Sincronização não configurada', 'planejado'); return Promise.resolve(); }
+  if(typeof firebase === 'undefined'){ setSyncStatus('🔴 Não foi possível carregar a sincronização (sem internet?)', 'planejado'); return Promise.resolve(); }
+  try{
+    if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(config);
+    firebaseDbRef = firebase.database().ref('gastosApp/estado');
+    syncEnabled = true;
+    setSyncStatus('🟡 Conectando...', 'planejado');
+    // Ao conectar: usa o estado mais recente entre o local e o remoto (comparando timestamp),
+    // e depois fica escutando qualquer mudança nova em tempo real.
+    return firebaseDbRef.once('value').then(snap=>{
+      const remoto = snap.val();
+      // Remoto vence se for mais novo OU se o local nunca teve edição do
+      // usuário (sem _syncTs = veio do SEED embutido no arquivo, não é dado seu).
+      if(remoto && (!STATE._syncTs || remoto._syncTs > STATE._syncTs)){
+        syncApplyingRemote = true;
+        STATE = sanitizeState(remoto);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+        renderAll();
+        syncApplyingRemote = false;
+      } else if(remoto && remoto._syncTs && STATE._syncTs > remoto._syncTs){
+        // Local marcado como MAIS NOVO que a nuvem. Isso só é legítimo se você
+        // editou com a internet fora. Como sobrescrever a nuvem em silêncio já
+        // apagou lançamentos antes, agora pergunta — e o padrão é ficar com a nuvem.
+        const usarLocal = confirm(
+          'Atenção: este computador tem dados marcados como mais novos que os da nuvem.\n\n'+
+          'Última edição neste computador: '+new Date(STATE._syncTs).toLocaleString('pt-BR')+'\n'+
+          'Última edição na nuvem: '+new Date(remoto._syncTs).toLocaleString('pt-BR')+'\n\n'+
+          'Isso normalmente só acontece se você lançou algo aqui sem internet.\n'+
+          'OK = enviar os dados deste computador pra nuvem (sobrescreve a nuvem).\n'+
+          'Cancelar = usar os dados da nuvem (descarta o que está só aqui).');
+        if(usarLocal){
+          firebaseDbRef.set(STATE);
+          backupSnapshotToHistorico('local-venceu-nuvem');
+        } else {
+          syncApplyingRemote = true;
+          STATE = sanitizeState(remoto);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+          renderAll();
+          syncApplyingRemote = false;
+        }
+      } else {
+        // Mesmo carimbo (mesmo dispositivo recarregando) ou nuvem vazia: envia o local.
+        firebaseDbRef.set(STATE);
+        backupSnapshotToHistorico(remoto ? 'abertura' : 'primeiro-envio');
+      }
+      setSyncStatus('🟢 Sincronizado', 'pago');
+      verificarVersaoPublicada();
+      firebaseDbRef.on('value', snap2=>{
+        const novo = snap2.val();
+        if(!novo || syncApplyingRemote) return;
+        // Só aceita a atualização remota se ela for realmente mais nova que
+        // o que já temos localmente (não só "diferente"). Antes, um evento
+        // atrasado — por exemplo, chegando enquanto uma caixa de pergunta
+        // (prompt) travava a aba, ou a aba estava em segundo plano —
+        // conseguia sobrescrever uma edição local mais recente só porque o
+        // carimbo de hora não batia igualzinho com o nosso. Isso apagava
+        // silenciosamente lançamentos que tinham acabado de ser salvos.
+        if(novo._syncTs && STATE._syncTs && novo._syncTs <= STATE._syncTs) return;
+        syncApplyingRemote = true;
+        STATE = sanitizeState(novo);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+        syncApplyingRemote = false;
+        aplicarMigracoes();
+        renderAll();
+        toast('Dados atualizados por outro dispositivo!');
+      });
+    }).catch(err=>{
+      console.warn('Erro de sincronização:', err);
+      setSyncStatus('🔴 Erro na sincronização: '+(err&&err.message?err.message:err), 'planejado');
+    });
+  }catch(e){
+    console.warn(e);
+    setSyncStatus('🔴 Configuração inválida: '+(e&&e.message?e.message:e), 'planejado');
+    return Promise.resolve();
+  }
+}
+/* Aviso de versão: cada cópia do app, ao conectar, registra sua versão em
+   gastosApp/versaoPublicada (se for mais nova que a registrada). Quem abrir
+   uma versão mais antiga vê o aviso no cabeçalho pra dar F5 / pegar o
+   arquivo novo — evita dois computadores rodando código diferente, que foi
+   a suspeita principal na perda de lançamentos. Formato AAAA-MM-DDx permite
+   comparar como texto. */
+function verificarVersaoPublicada(){
+  if(!firebaseDbRef) return;
+  const ref = firebaseDbRef.parent.child('versaoPublicada');
+  ref.on('value', snap=>{
+    const pub = snap.val();
+    const el = document.getElementById('avisoVersao');
+    if(!pub || pub < APP_VERSAO){
+      ref.set(APP_VERSAO);
+      if(el) el.style.display='none';
+    } else if(pub > APP_VERSAO && el){
+      el.textContent = '⚠ Versão nova disponível (v'+pub+'). Você está na v'+APP_VERSAO+' — dê F5 ou pegue o arquivo novo.';
+      el.style.display='';
+    } else if(el){ el.style.display='none'; }
+  });
+}
+function syncPushToFirebase(motivo){
+  if(!syncEnabled || syncApplyingRemote || !firebaseDbRef) return;
+  firebaseDbRef.set(STATE).catch(err=>console.warn('Erro ao enviar dados:', err));
+  backupSnapshotToHistorico(motivo||'edicao');
+}
+/* Guarda uma cópia de segurança a cada envio, com carimbo de data/hora, num
+   caminho separado (gastosApp/historico). Isso serve de rede de proteção:
+   se por qualquer motivo um dispositivo desatualizado sobrescrever os dados
+   "atuais" (gastosApp/estado), ainda dá pra restaurar um backup recente pelo
+   botão "Restaurar backup automático". Mantém só os últimos 50 backups. */
+function backupSnapshotToHistorico(motivo){
+  if(!firebaseDbRef) return;
+  try{
+    const historicoRef = firebaseDbRef.parent.child('historico');
+    // Chave = momento do envio (não o _syncTs, que agora só muda em edição do
+    // usuário — senão envios automáticos sobrescreveriam o backup anterior).
+    // Guarda também QUEM enviou e POR QUÊ, pra rastrear perdas de dados.
+    const meta = { ts: Date.now(), motivo: motivo||'?', dispositivo: dispositivoId(), versao: APP_VERSAO, syncTs: STATE._syncTs||null,
+      resumo: 'cartão: '+(STATE.cartaoAvulso||[]).length+' meses · parcelas: '+(STATE.parcelas||[]).length+' · saldoReal: '+(STATE.saldoReal||[]).length };
+    historicoRef.child(String(meta.ts)).set({ meta, estado: STATE }).then(()=>{
+      historicoRef.orderByKey().once('value').then(snap=>{
+        const keys = [];
+        snap.forEach(child=>{ keys.push(child.key); });
+        if(keys.length>50){
+          keys.slice(0, keys.length-50).forEach(k=> historicoRef.child(k).remove());
+        }
+      });
+    }).catch(err=>console.warn('Erro ao salvar backup automático:', err));
+  }catch(e){ console.warn(e); }
+}
+document.getElementById('btnSync').onclick=()=>{
+  const atual = getSyncConfig();
+  const texto = prompt(
+    'Cole aqui o "firebaseConfig" (o mesmo nos dois computadores) que o Claude te ajudou a criar.\n'+
+    'Exemplo: {"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"..."}\n\n'+
+    'Pra desativar a sincronização, apague o texto e confirme em branco.',
+    atual ? JSON.stringify(atual) : ''
+  );
+  if(texto===null) return;
+  if(!texto.trim()){
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({disabled:true}));
+    syncEnabled = false;
+    if(firebaseDbRef) firebaseDbRef.off();
+    setSyncStatus('⚪ Sincronização desativada neste dispositivo', 'planejado');
+    toast('Sincronização desativada.');
+    return;
+  }
+  try{
+    const config = JSON.parse(texto);
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config));
+    toast('Configuração salva! Conectando...');
+    initFirebaseSync();
+  }catch(e){
+    alert('Não consegui entender esse texto. Confira se colou o firebaseConfig certinho (formato JSON).');
+  }
+};
+document.getElementById('btnRestoreCloud').onclick=()=>{
+  if(!firebaseDbRef){ alert('Sincronização não está conectada agora. Configure a sincronização primeiro (botão ao lado).'); return; }
+  const historicoRef = firebaseDbRef.parent.child('historico');
+  historicoRef.orderByKey().limitToLast(30).once('value').then(snap=>{
+    const itens = [];
+    snap.forEach(child=>{
+      const v = child.val();
+      // formato novo {meta, estado} ou antigo (estado direto)
+      itens.push({ ts: Number(child.key), val: v && v.estado ? v.estado : v, meta: (v && v.meta) || {} });
+    });
+    itens.reverse(); // mais recente primeiro
+    if(!itens.length){ alert('Nenhum backup automático encontrado ainda (eles começam a ser guardados a partir de agora, a cada sincronização).'); return; }
+    const lista = itens.map((it,i)=> (i+1)+') '+new Date(it.ts).toLocaleString('pt-BR')
+      +(it.meta.motivo ? '  ['+it.meta.motivo+' · '+(it.meta.dispositivo||'?')+' · v'+(it.meta.versao||'antiga')+(it.meta.resumo?' · '+it.meta.resumo:'')+']' : '  [versão antiga do app]')).join('\n');
+    const escolha = prompt('Backups automáticos disponíveis (mais recente primeiro):\n'+lista+'\n\nDigite o número do backup que deseja restaurar:');
+    if(escolha===null) return;
+    const idx = parseInt(escolha,10)-1;
+    if(isNaN(idx) || idx<0 || idx>=itens.length){ alert('Número inválido.'); return; }
+    if(!confirm('Isso vai substituir os dados atuais (neste dispositivo e no compartilhado) pelo backup de '+new Date(itens[idx].ts).toLocaleString('pt-BR')+'. Confirma?')) return;
+    STATE = sanitizeState(itens[idx].val);
+    STATE._syncTs = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+    aplicarMigracoes();
+    renderAll();
+    syncPushToFirebase('restauracao');
+    toast('Backup restaurado!');
+  }).catch(err=>{ alert('Erro ao buscar backups: '+(err&&err.message?err.message:err)); });
+};
+
+/* ================== MIGRAÇÕES ==================
+   Gancho para ajustes automáticos de dados que precisem rodar uma vez em cada
+   estado (sempre com saveStateInterno(), e só depois que a sincronização com o
+   Firebase já escolheu o estado mais novo — ver initFirebaseSync/.finally —,
+   pra nunca competir com dados lançados pelo usuário; cada migração com flag
+   _migrou* própria, nunca reexecutada).
+   Desde 25/11/2026 o código público NÃO leva mais migrações com valores
+   pessoais: as anteriores já foram aplicadas nos dados e foram removidas, e as
+   correções de dados passam a ser feitas direto nos dados, fora do código.
+   Restaurar um backup ANTIGO não reaplica essas correções. */
+function aplicarMigracoes(){
+}
+
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer=setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ================== HELPERS DE DATA ================== */
+function pad2(n){ return n<10?'0'+n:''+n; }
+function monthAdd(mes, n){
+  let [y,m]=mes.split('-').map(Number);
+  m += n;
+  y += Math.floor((m-1)/12);
+  m = ((m-1)%12+12)%12+1;
+  return y+'-'+pad2(m);
+}
+function monthDiff(a,b){
+  let [ya,ma]=a.split('-').map(Number);
+  let [yb,mb]=b.split('-').map(Number);
+  return (yb-ya)*12+(mb-ma);
+}
+function monthRange(start,end){
+  const out=[]; let cur=start;
+  while(monthDiff(cur,end)>=0){ out.push(cur); cur=monthAdd(cur,1); }
+  return out;
+}
+const MESES_PT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function formatMes(mes){
+  const [y,m]=mes.split('-').map(Number);
+  return MESES_PT[m-1]+'/'+y;
+}
+/* Mostra o histórico de valores de forma legível. Quando são poucas
+   mudanças, lista cada uma. Quando é um histórico longo com passo fixo
+   (ex: financiamento caindo R$15/mês, mês a mês), resume numa única linha
+   em vez de mostrar centenas de tags — o que já causou confusão (parecia
+   um desconto maior do que realmente é). */
+function formatHistoricoCompacto(historico){
+  if(historico.length <= 4){
+    return historico.map(h=>`<span class="hist-tag">${formatMes(h.mes)}: ${fmtBRL(h.valor)}</span>`).join('');
+  }
+  const primeiro = historico[0], ultimo = historico[historico.length-1];
+  const passo = historico[1].valor - historico[0].valor;
+  const passoConstante = historico.every((h,i)=> i===0 || Math.abs((h.valor - historico[i-1].valor) - passo) < 0.005);
+  if(passoConstante && passo!==0){
+    const sinal = passo<0 ? '−' : '+';
+    return `<span class="hist-tag">${formatMes(primeiro.mes)}: ${fmtBRL(primeiro.valor)}</span>` +
+      `<span class="muted" style="font-size:12px;"> · ${sinal}${fmtBRL(Math.abs(passo))}/mês</span>` +
+      `<span class="hist-tag">${formatMes(ultimo.mes)}: ${fmtBRL(ultimo.valor)}</span>`;
+  }
+  return `<span class="hist-tag">${formatMes(primeiro.mes)}: ${fmtBRL(primeiro.valor)}</span>` +
+    `<span class="muted" style="font-size:12px;"> ... </span>` +
+    `<span class="hist-tag">${formatMes(ultimo.mes)}: ${fmtBRL(ultimo.valor)}</span>`;
+}
+function todayMonth(){
+  const d=new Date();
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1);
+}
+function fmtBRL(v){
+  v = v||0;
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+/* ================== ENGINE DE CÁLCULO ================== */
+/* Valor vigente num mês, a partir de um histórico de "pontos de mudança"
+   [{mes,valor}] — o mesmo padrão usado nas Recorrentes, e reaproveitado
+   aqui pro CDI e pros salários (que também só mudam de vez em quando). */
+function getValorNoMes(historico, mes){
+  let val = 0;
+  for(const h of (historico||[])){
+    if(h.mes <= mes) val = h.valor; else break;
+  }
+  return val;
+}
+function getRecorrenteValor(rec, mes){
+  return getValorNoMes(rec.historico, mes);
+}
+function parcelaMeses(p){
+  return monthRange(p.mesInicio, monthAdd(p.mesInicio, p.qtdParcelas-1));
+}
+/* Consumo mensal do cartão (compras avulsas, não parceladas). Meses com
+   valor já lançado usam o valor real; meses sem lançamento (tipicamente o
+   mês vigente antes de você atualizar, ou meses futuros) usam um consumo
+   base de R$3.000 como estimativa padrão pro orçamento não ficar zerado. */
+const CONSUMO_CARTAO_BASE = 3000;
+function valorConsumoCartao(mes){
+  const cav = STATE.cartaoAvulso.find(c=>c.mes===mes);
+  return cav ? cav.valor : CONSUMO_CARTAO_BASE;
+}
+function computeMes(mes){
+  const breakdown = { recorrentesPorGrupo:{}, parcelas:0, cartaoAvulso:0, lancamentos:0 };
+  // itens: mesmas chaves usadas no gráfico/tabela de composição, cada uma
+  // com a lista de itens que compõem aquele valor no mês — usado pra
+  // detalhar o que foi lançado quando o usuário clica numa categoria.
+  const itens = { 'Parcelas (histórico)':[], 'Consumo cartão (avulso/não parcelado)':[], 'Lançamentos novos':[] };
+  let total = 0;
+  STATE.recorrentes.forEach(r=>{
+    const v = getRecorrenteValor(r, mes);
+    if(v>0){
+      breakdown.recorrentesPorGrupo[r.grupo] = (breakdown.recorrentesPorGrupo[r.grupo]||0) + v;
+      (itens[r.grupo] = itens[r.grupo]||[]).push({ nome:r.nome, valor:v });
+    }
+    total += v;
+  });
+  (STATE.recorrentesTemporarios||[]).forEach(r=>{
+    if(mes < r.historico[0].mes) return; // ainda não começou
+    if(r.mesFim && mes > r.mesFim) return; // já encerrado
+    const v = getRecorrenteValor(r, mes);
+    if(v>0){
+      breakdown.recorrentesPorGrupo[r.grupo] = (breakdown.recorrentesPorGrupo[r.grupo]||0) + v;
+      (itens[r.grupo] = itens[r.grupo]||[]).push({ nome:r.nome+' (prazo definido)', valor:v });
+    }
+    total += v;
+  });
+  STATE.parcelas.forEach(p=>{
+    if(parcelaMeses(p).includes(mes)){
+      breakdown.parcelas += p.valorParcela; total += p.valorParcela;
+      const parcelaAtual = monthDiff(p.mesInicio, mes)+1;
+      itens['Parcelas (histórico)'].push({ nome:p.descricao+' ('+parcelaAtual+'/'+p.qtdParcelas+')', valor:p.valorParcela });
+    }
+  });
+  const valorCav = valorConsumoCartao(mes);
+  breakdown.cartaoAvulso += valorCav; total += valorCav;
+  itens['Consumo cartão (avulso/não parcelado)'].push({ nome: STATE.cartaoAvulso.some(c=>c.mes===mes) ? 'Consumo lançado do mês' : 'Estimativa padrão (sem lançamento)', valor:valorCav });
+  STATE.lancamentos.forEach(l=>{
+    if(parcelaMeses(l).includes(mes)){
+      breakdown.lancamentos += l.valorParcela; total += l.valorParcela;
+      const parcelaAtual = monthDiff(l.mesInicio, mes)+1;
+      itens['Lançamentos novos'].push({ nome:l.descricao+(l.qtdParcelas>1?' ('+parcelaAtual+'/'+l.qtdParcelas+')':'')+(l.categoria?' — '+l.categoria:''), valor:l.valorParcela });
+    }
+  });
+  return { total, breakdown, itens };
+}
+/* ================== APLICAÇÕES / SALDO INVESTIDO ================== */
+/* Quanto falta (ou sobra) no mês, comparando salário total (Henrique +
+   Juliana) com o custo do mês. Só o que falta é retirado das aplicações —
+   quando sobra, o saldo não recebe nada extra automaticamente (só o
+   rendimento do CDI), conforme definido. */
+/* Salário de uma pessoa num mês: usa o valor exato lançado se existir; senão,
+   em meses futuros (ainda sem lançamento) usa a referência definida pra
+   projeção — e só na falta dela cai no último valor realmente lançado. */
+function getSalarioPessoa(historico, referencia, mes){
+  const lancado = (historico||[]).find(h=>h.mes===mes);
+  if(lancado) return lancado.valor;
+  if(mes > todayMonth() && referencia!=null && !isNaN(referencia)) return referencia;
+  return getValorNoMes(historico, mes);
+}
+function saldoSalarios(mes){
+  const cfg = STATE.investimentos||{};
+  return getSalarioPessoa(STATE.salarioHenrique, cfg.salarioRefHenrique, mes)
+       + getSalarioPessoa(STATE.salarioJuliana, cfg.salarioRefJuliana, mes);
+}
+function faltaOuSobraMes(mes){
+  const custo = computeMes(mes).total;
+  const salario = saldoSalarios(mes);
+  return { custo, salario, diferenca: salario - custo }; // positivo = sobrou, negativo = faltou
+}
+/* Versão "só na teoria" do salário: usa SEMPRE a referência de projeção,
+   mesmo em meses que já têm salário real lançado. Existe separada de
+   saldoSalarios() porque o "Saldo aplicado (projetado)" precisa ser uma
+   base fixa que só muda se você mudar a referência — não pode ficar
+   balançando toda vez que o salário real do mês é lançado/editado (isso é
+   trabalho da linha "Saldo atualizado", que usa o real de propósito). */
+function saldoSalariosReferencia(mes){
+  const cfg = STATE.investimentos||{};
+  const refH = cfg.salarioRefHenrique, refJ = cfg.salarioRefJuliana;
+  const salH = (refH!=null && !isNaN(refH)) ? refH : getValorNoMes(STATE.salarioHenrique, mes);
+  const salJ = (refJ!=null && !isNaN(refJ)) ? refJ : getValorNoMes(STATE.salarioJuliana, mes);
+  return salH + salJ;
+}
+function faltaOuSobraMesReferencia(mes){
+  const custo = computeMes(mes).total;
+  const salario = saldoSalariosReferencia(mes);
+  return { custo, salario, diferenca: salario - custo };
+}
+/* CDI (% a.m.) a usar na projeção de saldo: sempre um valor FIXO conservador,
+   em TODOS os meses — fechados, corrente e futuros (decisão de 09/11/2026) —
+   abaixo do CDI recente (~1,07%) de propósito. O CDI real do BC (STATE.cdiMensal)
+   fica só como informação na aba Aplicações. Antes o app repetia o último valor
+   da série, que é o do mês corrente ainda PARCIAL (ex: 0,20% no dia 9), e a
+   projeção ficava pessimista demais. */
+const CDI_PROJECAO_PCT = 0.8;
+function taxaCdiMes(mes){
+  return CDI_PROJECAO_PCT;
+}
+/* Saldo aplicado ao final de um mês, partindo do saldo/mês base definidos
+   em STATE.investimentos, aplicando o rendimento do CDI mês a mês e
+   descontando o que faltou (quando o custo passa do salário) em cada mês
+   até o mês pedido. Retorna null se ainda não houver saldo base definido,
+   ou se o mês pedido for anterior ao mês base.
+   Usa sempre a referência de salário (nunca o valor real lançado) — assim
+   essa projeção fica estável, só mudando se você mudar a referência ou o
+   saldo base. Quem reflete o salário real mês a mês é o "Saldo atualizado"
+   (computeSaldoAtualizado), de propósito. */
+function computeSaldoInvestido(mesAlvo){
+  const cfg = STATE.investimentos || {};
+  if(!cfg.mesInicial || cfg.saldoInicial==null || isNaN(cfg.saldoInicial)) return null;
+  if(mesAlvo < cfg.mesInicial) return null;
+  let saldo = cfg.saldoInicial;
+  monthRange(cfg.mesInicial, mesAlvo).forEach(m=>{
+    // Mês com CDI real do Banco Central usa o valor daquele mês; meses sem
+    // dado ainda (normalmente o futuro) usam o último valor conhecido —
+    // é exatamente o que getValorNoMes já faz (repete o último até mudar).
+    const taxaMensalPct = taxaCdiMes(m);
+    saldo = saldo * (1 + taxaMensalPct/100);
+    const { diferenca } = faltaOuSobraMesReferencia(m);
+    if(diferenca < 0) saldo += diferenca; // só desconta o que faltou
+  });
+  return saldo;
+}
+/* Igual ao saldo projetado, mas em vez de partir sempre do saldo base
+   original, recalcula a partir do lançamento REAL mais recente (o mais
+   próximo do mês pedido) — assim a projeção futura sempre se ajusta
+   sozinha conforme você vai alimentando o saldo real de cada fechamento,
+   em vez de ficar "acumulando erro" desde o começo. Sem nenhum saldo real
+   lançado ainda, cai no mesmo cálculo do saldo projetado normal. */
+function computeSaldoAtualizado(mesAlvo){
+  const reaisAteAqui = STATE.saldoReal.filter(s=>s.mes<=mesAlvo).sort((a,b)=>a.mes.localeCompare(b.mes));
+  let ancoraMes, ancoraValor;
+  if(reaisAteAqui.length){
+    const ultimo = reaisAteAqui[reaisAteAqui.length-1];
+    if(ultimo.mes===mesAlvo) return ultimo.valor;
+    ancoraMes = ultimo.mes; ancoraValor = ultimo.valor;
+  } else {
+    const cfg = STATE.investimentos || {};
+    if(!cfg.mesInicial || cfg.saldoInicial==null || isNaN(cfg.saldoInicial)) return null;
+    if(mesAlvo < cfg.mesInicial) return null;
+    ancoraMes = cfg.mesInicial; ancoraValor = cfg.saldoInicial;
+  }
+  let saldo = ancoraValor;
+  monthRange(monthAdd(ancoraMes,1), mesAlvo).forEach(m=>{
+    const taxaMensalPct = taxaCdiMes(m);
+    saldo = saldo * (1 + taxaMensalPct/100);
+    const { diferenca } = faltaOuSobraMes(m);
+    if(diferenca < 0) saldo += diferenca;
+  });
+  return saldo;
+}
+function allMonthsRange(){
+  let mins=[], maxs=[];
+  STATE.recorrentes.forEach(r=>r.historico.forEach(h=>mins.push(h.mes)));
+  (STATE.recorrentesTemporarios||[]).forEach(r=>r.historico.forEach(h=>mins.push(h.mes)));
+  STATE.parcelas.forEach(p=>{ mins.push(p.mesInicio); maxs.push(monthAdd(p.mesInicio,p.qtdParcelas-1)); });
+  STATE.cartaoAvulso.forEach(c=>mins.push(c.mes));
+  STATE.lancamentos.forEach(l=>{ mins.push(l.mesInicio); maxs.push(monthAdd(l.mesInicio,l.qtdParcelas-1)); });
+  if(STATE.investimentos && STATE.investimentos.mesInicial) mins.push(STATE.investimentos.mesInicial);
+  const hoje = todayMonth();
+  maxs.push(monthAdd(hoje,12));
+  mins.push(hoje);
+  const start = mins.sort()[0];
+  const end = maxs.sort().reverse()[0];
+  return {start,end};
+}
+
+/* ================== NAV / TABS ================== */
+document.querySelectorAll('#tabNav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#tabNav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    renderAll();
+  });
+});
+
+/* ================== DASHBOARD ================== */
+let selectedMes = todayMonth();
+let chartMensal=null, chartPizza=null;
+let mesesProjecao = 12; // sempre contado a partir de hoje, nunca do último evento conhecido
+let modoInicio = '12m'; // '12m' = últimos 12 meses (padrão) | 'inicio' = desde o primeiro registro
+document.getElementById('selProjecao').onchange=(e)=>{ mesesProjecao=parseInt(e.target.value); renderChartMensal(); };
+document.getElementById('selInicio').onchange=(e)=>{ modoInicio=e.target.value; renderChartMensal(); };
+
+function populateMesSelect(){
+  const {start,end} = allMonthsRange();
+  const months = monthRange(start,end);
+  const sel = document.getElementById('selMes');
+  sel.innerHTML = months.map(m=>`<option value="${m}" ${m===selectedMes?'selected':''}>${formatMes(m)}</option>`).join('');
+  document.getElementById('mesHoje').textContent = 'Hoje: '+formatMes(todayMonth());
+}
+document.getElementById('prevMes').onclick=()=>{ selectedMes=monthAdd(selectedMes,-1); ensureMesInRange(); renderDashboard(); };
+document.getElementById('nextMes').onclick=()=>{ selectedMes=monthAdd(selectedMes,1); ensureMesInRange(); renderDashboard(); };
+document.getElementById('selMes').onchange=(e)=>{ selectedMes=e.target.value; renderDashboard(); };
+function ensureMesInRange(){
+  const {start,end}=allMonthsRange();
+  if(monthDiff(start,selectedMes)<0) selectedMes=start;
+  if(monthDiff(selectedMes,end)<0) selectedMes=end;
+}
+
+function renderKPIs(){
+  const hoje = todayMonth();
+  const dataHoje = computeMes(hoje);
+  const dataSel = computeMes(selectedMes);
+  const anoSel = selectedMes.slice(0,4);
+  let totalAno=0;
+  monthRange(anoSel+'-01', anoSel+'-12').forEach(m=>{ totalAno += computeMes(m).total; });
+  // média últimos 6 meses reais (até hoje)
+  let mediaMeses = monthRange(monthAdd(hoje,-5), hoje);
+  let media = mediaMeses.reduce((s,m)=>s+computeMes(m).total,0)/mediaMeses.length;
+
+  const cards = [
+    {label:'Total — '+formatMes(selectedMes), value:fmtBRL(dataSel.total), cls:'green'},
+    {label:'Total do mês atual ('+formatMes(hoje)+')', value:fmtBRL(dataHoje.total), cls:''},
+    {label:'Total acumulado em '+anoSel, value:fmtBRL(totalAno), cls:''},
+    {label:'Média mensal (últimos 6 meses)', value:fmtBRL(media), cls:''},
+  ];
+  document.getElementById('kpiCards').innerHTML = cards.map(c=>`
+    <div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>
+  `).join('');
+}
+
+function renderChartMensal(){
+  const hoje = todayMonth();
+  const {start:inicioHistorico, end:fimConhecido} = allMonthsRange();
+  // Início: por padrão sempre 12 meses atrás de hoje (não do primeiro
+  // registro). "Desde o início" usa o primeiro mês com dado real.
+  const inicioPadrao = monthAdd(hoje,-12);
+  const inicio = modoInicio==='inicio' ? inicioHistorico : (monthDiff(inicioHistorico,inicioPadrao)>=0 ? inicioPadrao : inicioHistorico);
+  // Fim: sempre projetado a partir de hoje (nunca do último evento
+  // conhecido), respeitando compromissos já lançados mais à frente.
+  const fimProjetado = monthAdd(hoje, mesesProjecao);
+  const fim = monthDiff(fimConhecido, fimProjetado) > 0 ? fimProjetado : fimConhecido;
+  const months = monthRange(inicio,fim);
+  const data = months.map(m=>computeMes(m).total);
+  const ctx = document.getElementById('chartMensal').getContext('2d');
+  if(chartMensal) chartMensal.destroy();
+  const hojeIdx = months.indexOf(todayMonth());
+  chartMensal = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: months.map(formatMes), datasets:[{
+      label:'Total do mês',
+      data,
+      backgroundColor: months.map((m,i)=> i<=hojeIdx ? 'rgba(79,209,165,0.75)' : 'rgba(91,141,239,0.45)'),
+      borderRadius:4,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>fmtBRL(c.parsed.y)}}},
+      scales:{
+        y:{ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{color:'#2a3446'}},
+        x:{ticks:{color:'#8b95a8', maxRotation:60, minRotation:60}, grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderChartPizza(){
+  const {breakdown} = computeMes(selectedMes);
+  const labels=[], data=[];
+  Object.entries(breakdown.recorrentesPorGrupo).forEach(([g,v])=>{ if(v>0){labels.push(g); data.push(v);} });
+  if(breakdown.parcelas>0){ labels.push('Parcelas (histórico)'); data.push(breakdown.parcelas); }
+  if(breakdown.cartaoAvulso>0){ labels.push('Consumo cartão (avulso/não parcelado)'); data.push(breakdown.cartaoAvulso); }
+  if(breakdown.lancamentos>0){ labels.push('Lançamentos novos'); data.push(breakdown.lancamentos); }
+  const ctx = document.getElementById('chartPizza').getContext('2d');
+  if(chartPizza) chartPizza.destroy();
+  const palette=['#4fd1a5','#5b8def','#f2b94b','#f0616b','#a78bfa','#38bdf8','#fb923c','#34d399'];
+  const totalPizza = data.reduce((s,v)=>s+v,0);
+  chartPizza = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor: labels.map((_,i)=>palette[i%palette.length]) }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      onClick:(evt, elements)=>{
+        if(!elements.length) return;
+        renderCategoriaDetalhe(labels[elements[0].index]);
+      },
+      onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+      plugins:{
+        legend:{position:'bottom',
+          labels:{color:'#e8ecf4', boxWidth:12, font:{size:11},
+            /* Parte da lista padrão do Chart.js (que já respeita a cor clara
+               configurada em Chart.defaults) e só acrescenta o percentual no
+               texto — evita reconstruir o item do zero e perder a cor. */
+            generateLabels:(chart)=>{
+              const base = Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+              return base.map((item,i)=>{
+                const v = chart.data.datasets[0].data[i];
+                const pct = totalPizza>0 ? (v/totalPizza*100).toFixed(1) : '0.0';
+                item.text = `${chart.data.labels[i]} (${pct}%)`;
+                item.fontColor = '#e8ecf4';
+                item.color = '#e8ecf4';
+                return item;
+              });
+            }
+          },
+          onClick:(evt, legendItem)=>{ renderCategoriaDetalhe(labels[legendItem.index]); }
+        },
+        tooltip:{callbacks:{label:(c)=>{
+          const pct = totalPizza>0 ? (c.parsed/totalPizza*100).toFixed(1) : '0.0';
+          return c.label+': '+fmtBRL(c.parsed)+' ('+pct+'%)';
+        }}}
+      }
+    }
+  });
+}
+
+function renderDetalheMes(){
+  const {total, breakdown} = computeMes(selectedMes);
+  const pct = (v)=> total>0 ? (v/total*100).toFixed(1)+'%' : '—';
+  const linha = (nome,v)=> `<tr class="linha-categoria" style="cursor:pointer;" onclick="renderCategoriaDetalhe('${nome.replace(/'/g,"\\'")}')"><td>${nome}</td><td style="text-align:right;">${fmtBRL(v)}</td><td style="text-align:right;">${pct(v)}</td></tr>`;
+  let rows = '';
+  Object.entries(breakdown.recorrentesPorGrupo).forEach(([g,v])=>{ rows += linha(g,v); });
+  rows += linha('Parcelas (histórico)', breakdown.parcelas);
+  rows += linha('Consumo cartão (avulso/não parcelado)', breakdown.cartaoAvulso);
+  rows += linha('Lançamentos novos', breakdown.lancamentos);
+  rows += `<tr class="total-row"><td>Total</td><td style="text-align:right;">${fmtBRL(total)}</td><td style="text-align:right;">100%</td></tr>`;
+  document.getElementById('tblDetalheMes').innerHTML = `<thead><tr><th>Categoria</th><th style="text-align:right;">Valor</th><th style="text-align:right;">% do mês</th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('painelCategoria').style.display = 'none';
+}
+
+/* Mostra a lista de itens que compõem uma categoria do mês selecionado —
+   chamado ao clicar numa fatia do gráfico, na legenda, ou numa linha da
+   tabela de detalhamento. */
+function renderCategoriaDetalhe(categoria){
+  const {itens, total} = computeMes(selectedMes);
+  const lista = (itens[categoria]||[]).slice().sort((a,b)=>b.valor-a.valor);
+  const totalCategoria = lista.reduce((s,i)=>s+i.valor,0);
+  document.getElementById('tituloCategoria').textContent = 'Itens em "'+categoria+'" — '+formatMes(selectedMes);
+  let rows;
+  if(!lista.length){
+    rows = `<tr><td colspan="3" class="muted">Nenhum item lançado nessa categoria neste mês.</td></tr>`;
+  } else {
+    rows = lista.map(i=>`<tr><td>${i.nome}</td><td style="text-align:right;">${fmtBRL(i.valor)}</td><td style="text-align:right;">${totalCategoria>0?(i.valor/totalCategoria*100).toFixed(1):'0.0'}%</td></tr>`).join('');
+    rows += `<tr class="total-row"><td>Total da categoria</td><td style="text-align:right;">${fmtBRL(totalCategoria)}</td><td style="text-align:right;">${total>0?(totalCategoria/total*100).toFixed(1):'0.0'}% do mês</td></tr>`;
+  }
+  document.getElementById('tblCategoria').innerHTML = `<thead><tr><th>Item</th><th style="text-align:right;">Valor</th><th style="text-align:right;">% da categoria</th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('painelCategoria').style.display = '';
+  document.getElementById('painelCategoria').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function renderDashboard(){
+  populateMesSelect();
+  renderKPIs();
+  renderChartMensal();
+  renderChartPizza();
+  renderDetalheMes();
+}
+
+/* ================== CONSUMO MENSAL DO CARTÃO (AVULSO) ================== */
+/* Isso é o que alimenta STATE.cartaoAvulso — a coluna "Cartão" da planilha
+   original virou o histórico aqui. Pra frente, o usuário vai atualizando o
+   consumo do mês vigente conforme gasta na semana; meses sem valor lançado
+   usam o consumo base de R$3.000 (ver valorConsumoCartao). */
+let selectedMesCartao = todayMonth();
+function rangeMesesCartao(){
+  let meses = STATE.cartaoAvulso.map(c=>c.mes);
+  meses.push(todayMonth(), monthAdd(todayMonth(), 12));
+  meses.sort();
+  return { start: meses[0], end: meses[meses.length-1] };
+}
+function populateMesSelectCartao(){
+  const {start,end} = rangeMesesCartao();
+  const meses = monthRange(start,end);
+  const sel = document.getElementById('selMesCartao');
+  sel.innerHTML = meses.map(m=>`<option value="${m}" ${m===selectedMesCartao?'selected':''}>${formatMes(m)}</option>`).join('');
+}
+document.getElementById('prevMesCartao').onclick=()=>{ selectedMesCartao=monthAdd(selectedMesCartao,-1); renderCartaoMensal(); };
+document.getElementById('nextMesCartao').onclick=()=>{ selectedMesCartao=monthAdd(selectedMesCartao,1); renderCartaoMensal(); };
+document.getElementById('selMesCartao').onchange=(e)=>{ selectedMesCartao=e.target.value; renderCartaoMensal(); };
+document.getElementById('btnSalvarCartaoMes').onclick=()=>{
+  const valorStr = document.getElementById('cartaoMesValor').value;
+  const valor = parseFloat(valorStr);
+  if(isNaN(valor)){ toast('Valor inválido.'); return; }
+  let entry = STATE.cartaoAvulso.find(c=>c.mes===selectedMesCartao);
+  if(!entry){ entry = { id: uid('cav'), mes: selectedMesCartao, valor }; STATE.cartaoAvulso.push(entry); }
+  else entry.valor = valor;
+  saveState();
+  toast('Consumo do mês salvo!');
+  renderAll();
+};
+function editarCartaoMes(mes, novoValor){
+  const valor = parseFloat(novoValor);
+  if(isNaN(valor)){ toast('Valor inválido.'); renderCartaoMensal(); return; }
+  let entry = STATE.cartaoAvulso.find(c=>c.mes===mes);
+  if(!entry){ entry = { id: uid('cav'), mes, valor }; STATE.cartaoAvulso.push(entry); }
+  else entry.valor = valor;
+  saveState(); toast('Consumo atualizado!'); renderAll();
+}
+function renderCartaoMensal(){
+  populateMesSelectCartao();
+  document.getElementById('cartaoMesValor').value = valorConsumoCartao(selectedMesCartao);
+  const list = STATE.cartaoAvulso.slice().sort((a,b)=>b.mes.localeCompare(a.mes));
+  let rows = list.map(c=>`<tr>
+    <td>${formatMes(c.mes)}${c.mes===todayMonth()?' <span class="muted" style="font-size:11px;">(mês vigente)</span>':''}</td>
+    <td style="text-align:right;"><input type="number" step="0.01" value="${c.valor}" style="width:120px;text-align:right;" onchange="editarCartaoMes('${c.mes}', this.value)"></td>
+  </tr>`).join('');
+  if(!list.length) rows = `<tr><td colspan="2" class="muted">Nenhum consumo lançado ainda.</td></tr>`;
+  document.getElementById('tblCartaoMensal').innerHTML = `
+    <thead><tr><th>Mês</th><th style="text-align:right;">Consumo lançado</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+  renderCheckpointsCartao();
+}
+
+/* ================== CHECKPOINTS DO CARTÃO (acompanhamento) ================== */
+/* Cada checkpoint = fatura parcial numa data; consumo real = fatura −
+   assinaturas do cartão − parcelas do mês. O consumo real do checkpoint mais
+   recente (por data) do mês é gravado em STATE.cartaoAvulso, que alimenta o
+   Dashboard — assim o mês vai refletindo o consumo real em tempo real, no
+   lugar da estimativa padrão (CONSUMO_CARTAO_BASE, que segue sendo o
+   orçamento de comparação e não muda). */
+function sincronizarCheckpointComConsumo(mes){
+  const list = (STATE.cartaoCheckpoints||[]).filter(c=>c.mes===mes)
+    .sort((a,b)=> a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
+  if(!list.length) return;
+  const consumo = Math.round(consumoRealCheckpoint(list[list.length-1], deducoesCartaoMes(mes))*100)/100;
+  let entry = STATE.cartaoAvulso.find(c=>c.mes===mes);
+  if(!entry){ entry = { id: uid('cav'), mes, valor: consumo }; STATE.cartaoAvulso.push(entry); }
+  else entry.valor = consumo;
+}
+function deducoesCartaoMes(mes){
+  const {breakdown} = computeMes(mes);
+  const assinaturas = breakdown.recorrentesPorGrupo['Assinaturas/Cartão'] || 0;
+  const parcelas = breakdown.parcelas + breakdown.lancamentos;
+  return { assinaturas, parcelas, total: assinaturas + parcelas };
+}
+function consumoRealCheckpoint(c, ded){
+  return c.tipo==='consumo' ? c.valor : c.valor - ded.total;
+}
+function fmtDataISO(iso){
+  const [y,m,d] = iso.split('-');
+  return d+'/'+m+'/'+y;
+}
+function hojeISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+function renderCheckpointsCartao(){
+  const mes = selectedMesCartao;
+  document.getElementById('ckTitulo').textContent = 'Acompanhamento do consumo — '+formatMes(mes);
+  const dataEl = document.getElementById('ckData');
+  if(!dataEl.value) dataEl.value = hojeISO();
+  const ded = deducoesCartaoMes(mes);
+  const list = (STATE.cartaoCheckpoints||[]).filter(c=>c.mes===mes)
+    .sort((a,b)=> a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
+  const orcamento = CONSUMO_CARTAO_BASE;
+  const ultimo = list.length ? list[list.length-1] : null;
+  const consumoAtual = ultimo ? consumoRealCheckpoint(ultimo, ded) : null;
+  const restante = consumoAtual!=null ? orcamento - consumoAtual : null;
+  const cards = [
+    { label:'Consumo real até aqui'+(ultimo?' ('+fmtDataISO(ultimo.data)+')':''), value: consumoAtual!=null ? fmtBRL(consumoAtual) : '— (sem checkpoint)', cls: '' },
+    { label:'Orçamento do mês', value: fmtBRL(orcamento), cls:'' },
+    { label: restante!=null && restante<0 ? 'Acima do orçamento' : 'Restante do orçamento', value: restante!=null ? fmtBRL(Math.abs(restante)) : '—', cls: restante==null ? '' : (restante<0 ? 'red' : 'green') },
+    { label:'Descontado da fatura (assinaturas + parcelas)', value: fmtBRL(ded.total), cls:'' },
+  ];
+  document.getElementById('ckCards').innerHTML = cards.map(c=>`<div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>`).join('');
+  const pct = consumoAtual!=null ? Math.max(0, consumoAtual/orcamento*100) : 0;
+  const fill = document.getElementById('ckBarraFill');
+  fill.style.width = Math.min(100, pct)+'%';
+  fill.style.background = pct>100 ? 'var(--red)' : (pct>=80 ? 'var(--yellow)' : 'var(--accent)');
+  const aviso = document.getElementById('ckAviso');
+  if(consumoAtual==null) aviso.textContent = 'Nenhum checkpoint registrado neste mês.';
+  else if(consumoAtual<0) aviso.textContent = 'Consumo negativo: a fatura informada é menor que assinaturas + parcelas do mês ('+fmtBRL(ded.total)+') — normalmente a fatura ainda não trouxe tudo, ou há estorno. O valor negativo foi levado ao consumo do mês; ajuste manualmente se quiser.';
+  else aviso.textContent = pct.toFixed(0)+'% do orçamento usado. Assinaturas: '+fmtBRL(ded.assinaturas)+' · Parcelas: '+fmtBRL(ded.parcelas)+'.';
+  let rows = list.map((c,i)=>{
+    const consumo = consumoRealCheckpoint(c, ded);
+    const anterior = i>0 ? consumoRealCheckpoint(list[i-1], ded) : null;
+    const delta = anterior!=null ? consumo - anterior : null;
+    return `<tr>
+      <td>${fmtDataISO(c.data)}</td>
+      <td style="text-align:right;">${fmtBRL(c.valor)} <span class="muted" style="font-size:11px;">${c.tipo==='consumo'?'consumo':'fatura'}</span></td>
+      <td style="text-align:right;font-weight:600;">${fmtBRL(consumo)}</td>
+      <td style="text-align:right;">${delta!=null ? (delta>=0?'+':'−')+fmtBRL(Math.abs(delta)) : '<span class="muted">—</span>'}</td>
+      <td class="actions"><button class="btn danger small" onclick="removerCheckpointCartao('${c.id}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
+  if(!list.length) rows = `<tr><td colspan="5" class="muted">Nenhum checkpoint neste mês.</td></tr>`;
+  document.getElementById('tblCheckpoints').innerHTML = `
+    <thead><tr><th>Data</th><th style="text-align:right;">Informado</th><th style="text-align:right;">Consumo real</th><th style="text-align:right;">Desde o anterior</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+document.getElementById('btnAddCk').onclick=()=>{
+  const data = document.getElementById('ckData').value;
+  const valor = parseFloat(document.getElementById('ckValor').value);
+  const tipo = document.getElementById('ckTipo').value;
+  if(!data){ toast('Informe a data.'); return; }
+  if(isNaN(valor) || valor<0){ toast('Valor inválido.'); return; }
+  STATE.cartaoCheckpoints.push({ id: uid('ck'), mes: selectedMesCartao, data, valor, tipo });
+  document.getElementById('ckValor').value = '';
+  sincronizarCheckpointComConsumo(selectedMesCartao);
+  saveState();
+  toast('Checkpoint registrado e consumo do mês atualizado!');
+  renderAll();
+};
+function removerCheckpointCartao(id){
+  if(!confirm('Excluir este checkpoint? O consumo do mês será recalculado a partir do último checkpoint restante.')) return;
+  const mes = (STATE.cartaoCheckpoints.find(c=>c.id===id)||{}).mes;
+  STATE.cartaoCheckpoints = STATE.cartaoCheckpoints.filter(c=>c.id!==id);
+  if(mes) sincronizarCheckpointComConsumo(mes);
+  saveState(); toast('Checkpoint excluído.'); renderAll();
+}
+
+/* ================== LANÇAMENTOS ================== */
+function refreshCatList(){
+  const cats = new Set();
+  STATE.parcelas.forEach(p=>{ if(p.categoria) cats.add(p.categoria); });
+  STATE.recorrentes.forEach(r=>cats.add(r.grupo));
+  document.getElementById('catList').innerHTML = [...cats].filter(Boolean).map(c=>`<option value="${c}">`).join('');
+}
+/* Calcula sozinho o valor da parcela a partir do valor total ÷ qtd de
+   vezes, sempre que o usuário mexer em qualquer um dos dois campos.
+   O campo "Valor da parcela" continua editável manualmente depois, caso
+   o valor real (com juros/arredondamento da fatura) seja um pouco diferente. */
+function recalcularValorParcelaLan(){
+  const totalStr = document.getElementById('lanValorTotal').value;
+  const qtd = parseInt(document.getElementById('lanQtd').value) || 1;
+  const total = parseFloat(totalStr);
+  if(!isNaN(total) && qtd>0){
+    document.getElementById('lanValor').value = (Math.round((total/qtd)*100)/100).toFixed(2);
+  }
+}
+document.getElementById('lanValorTotal').addEventListener('input', recalcularValorParcelaLan);
+document.getElementById('lanQtd').addEventListener('input', recalcularValorParcelaLan);
+/* Edição de compra: o mesmo formulário de cadastro serve pra editar — o
+   botão "Editar" na tabela preenche os campos, guarda o id em edicaoLanId e
+   o "+ Adicionar" vira "Salvar alterações". Ao salvar, atualiza a parcela
+   NO LUGAR (mesmo id), então vínculos com a Reforma do Apto continuam
+   valendo — e o item da reforma vinculado tem total/parcela atualizados. */
+let edicaoLanId = null;
+function iniciarEdicaoLan(id){
+  const l = STATE.parcelas.find(x=>x.id===id);
+  if(!l) return;
+  edicaoLanId = id;
+  document.getElementById('lanData').value = l.dataCompra||'';
+  document.getElementById('lanMesPagamento').value = l.mesInicio||'';
+  document.getElementById('lanDesc').value = l.descricao||'';
+  document.getElementById('lanCat').value = l.categoria||'';
+  document.getElementById('lanQtd').value = l.qtdParcelas||1;
+  document.getElementById('lanValor').value = l.valorParcela||'';
+  document.getElementById('lanValorTotal').value = Math.round((l.valorParcela||0)*(l.qtdParcelas||1)*100)/100;
+  document.getElementById('tituloFormLan').textContent = 'Editando: '+(l.descricao||'');
+  document.getElementById('btnAddLan').textContent = 'Salvar alterações';
+  document.getElementById('btnCancelEditLan').style.display = '';
+  // garante que o formulário esteja visível (o Editar também existe na aba Parcelas)
+  document.querySelector('nav button[data-tab="lancamentos"]').click();
+  document.getElementById('tituloFormLan').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function cancelarEdicaoLan(){
+  edicaoLanId = null;
+  ['lanData','lanMesPagamento','lanDesc','lanCat','lanValorTotal','lanValor'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('lanQtd').value='1';
+  document.getElementById('tituloFormLan').textContent = 'Adicionar nova compra no cartão';
+  document.getElementById('btnAddLan').textContent = '+ Adicionar';
+  document.getElementById('btnCancelEditLan').style.display = 'none';
+}
+document.getElementById('btnCancelEditLan').onclick = cancelarEdicaoLan;
+document.getElementById('btnAddLan').onclick = ()=>{
+  const data = document.getElementById('lanData').value; // opcional, só informativo
+  const mesPagamento = document.getElementById('lanMesPagamento').value; // fonte de verdade dos cálculos
+  const desc = document.getElementById('lanDesc').value.trim();
+  const cat = document.getElementById('lanCat').value.trim() || 'Outros';
+  const valor = parseFloat(document.getElementById('lanValor').value);
+  const qtd = parseInt(document.getElementById('lanQtd').value) || 1;
+  if(!mesPagamento || !desc || !valor){ toast('Preencha o mês do pagamento, a descrição e o valor (ou valor total + qtd de parcelas).'); return; }
+  if(edicaoLanId){
+    const l = STATE.parcelas.find(x=>x.id===edicaoLanId);
+    if(!l){ toast('Esse lançamento não existe mais.'); cancelarEdicaoLan(); renderAll(); return; }
+    Object.assign(l, { dataCompra:data||null, descricao:desc, categoria:cat, valorParcela:valor, qtdParcelas:qtd, mesInicio:mesPagamento });
+    // mantém o item da Reforma vinculado coerente com o novo valor
+    const ap = STATE.aptoPlanejado.find(i=> i.lancamentoRef && i.lancamentoRef.aba==='parcelas' && i.lancamentoRef.id===l.id);
+    if(ap){ ap.parcela = valor; ap.qtdX = qtd; ap.parcelado = Math.round(valor*qtd*100)/100; ap.total = ap.parcelado + (ap.frete||0); }
+    saveState();
+    cancelarEdicaoLan();
+    toast('Compra atualizada!');
+    renderAll();
+    return;
+  }
+  // Vai direto pra STATE.parcelas — assim aparece junto com todo o resto
+  // na aba Parcelas (Cartão), que é a fonte única de parcelamentos.
+  STATE.parcelas.push({
+    id: uid('lan'), dataCompra:data||null, descricao:desc, categoria:cat,
+    valorParcela: valor, qtdParcelas: qtd, mesInicio: mesPagamento
+  });
+  saveState();
+  cancelarEdicaoLan();
+  toast('Compra adicionada!');
+  renderAll();
+};
+document.getElementById('searchLan').oninput = renderLancamentos;
+
+function renderLancamentos(){
+  refreshCatList();
+  const q = (document.getElementById('searchLan').value||'').toLowerCase();
+  // Essa lista mostra só o que foi cadastrado por este formulário (tem
+  // categoria); as parcelas "clássicas" (cartão, sem categoria) continuam
+  // vivendo só na aba Parcelas (Cartão), que já mostra tudo junto.
+  let list = STATE.parcelas.filter(p=>p.categoria).slice().sort((a,b)=> b.mesInicio.localeCompare(a.mesInicio));
+  if(q) list = list.filter(l=> l.descricao.toLowerCase().includes(q) || (l.categoria||'').toLowerCase().includes(q));
+  let rows = list.map(l=>{
+    const totalCompra = l.valorParcela * l.qtdParcelas;
+    const restantes = parcelasRestantes(l);
+    const status = l.qtdParcelas<=1 ? 'à vista' : (restantes<=0 ? 'Quitado' : (restantes+'x restantes'));
+    const compraInfo = l.dataCompra ? `<br><span class="muted" style="font-size:11.5px;">comprado em ${l.dataCompra.split('-').reverse().join('/')}</span>` : '';
+    return `<tr>
+      <td>${formatMes(l.mesInicio)}</td>
+      <td>${l.descricao}${compraInfo}</td>
+      <td>${l.categoria}</td>
+      <td style="text-align:right;">${fmtBRL(l.valorParcela)}</td>
+      <td style="text-align:center;"><input type="number" min="1" step="1" value="${l.qtdParcelas}" style="width:70px;text-align:center;" onchange="editarQtdLancamento('${l.id}', this.value)"></td>
+      <td style="text-align:right;">${fmtBRL(totalCompra)}</td>
+      <td style="text-align:center;">${status}</td>
+      <td class="actions">
+        <button class="btn secondary small" onclick="iniciarEdicaoLan('${l.id}')">Editar</button>
+        <button class="btn danger small" onclick="deleteLancamento('${l.id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+  if(!list.length) rows = `<tr><td colspan="8" class="muted">Nenhum lançamento ainda. Adicione sua primeira compra acima.</td></tr>`;
+  document.getElementById('tblLancamentos').innerHTML = `
+    <thead><tr><th>Mês do pagamento</th><th>Descrição</th><th>Categoria</th><th style="text-align:right;">Valor/parcela</th><th>Parcelas (total de vezes)</th><th style="text-align:right;">Total</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+function editarQtdLancamento(id, novoValor){
+  const l = STATE.parcelas.find(x=>x.id===id);
+  if(!l) return;
+  const qtd = parseInt(novoValor);
+  if(isNaN(qtd) || qtd<1){ toast('Quantidade inválida.'); renderLancamentos(); return; }
+  l.qtdParcelas = qtd;
+  saveState(); toast('Quantidade de parcelas atualizada!'); renderAll();
+}
+function deleteLancamento(id){
+  if(!confirm('Excluir esta compra?')) return;
+  if(edicaoLanId===id) cancelarEdicaoLan();
+  STATE.parcelas = STATE.parcelas.filter(l=>l.id!==id);
+  saveState(); toast('Lançamento removido.'); renderAll();
+}
+
+/* ================== RECORRENTES ================== */
+document.getElementById('btnAddRec').onclick=()=>{
+  const nome = document.getElementById('recNome').value.trim();
+  const grupo = document.getElementById('recGrupo').value.trim() || 'Outros';
+  const valor = parseFloat(document.getElementById('recValor').value);
+  const mes = document.getElementById('recMes').value;
+  if(!nome || isNaN(valor) || !mes){ toast('Preencha nome, valor e mês de início.'); return; }
+  STATE.recorrentes.push({ id: uid('rec'), nome, grupo, historico:[{mes, valor}] });
+  saveState();
+  document.getElementById('recNome').value='';
+  document.getElementById('recValor').value='';
+  toast('Item recorrente adicionado!');
+  renderAll();
+};
+function refreshGrupoList(){
+  const grupos = new Set(STATE.recorrentes.map(r=>r.grupo));
+  document.getElementById('grupoList').innerHTML = [...grupos].map(g=>`<option value="${g}">`).join('');
+}
+function renderRecorrentes(){
+  refreshGrupoList();
+  const groups = {};
+  STATE.recorrentes.forEach(r=>{ (groups[r.grupo]=groups[r.grupo]||[]).push(r); });
+  let html='';
+  Object.entries(groups).forEach(([grupo, items])=>{
+    html += `<div class="rec-group"><h3>${grupo}</h3><table><thead><tr><th>Nome</th><th style="text-align:right;">Valor atual</th><th>Histórico</th><th></th></tr></thead><tbody>`;
+    items.forEach(r=>{
+      const atual = getRecorrenteValor(r, todayMonth());
+      const hist = formatHistoricoCompacto(r.historico);
+      html += `<tr>
+        <td>${r.nome}</td>
+        <td style="text-align:right;font-weight:600;">${fmtBRL(atual)}</td>
+        <td>${hist}</td>
+        <td class="actions">
+          <button class="btn secondary small" onclick="promptNovoValor('${r.id}')">Alterar valor</button>
+          <button class="btn secondary small" onclick="definirFimRecorrente('${r.id}')">Definir término</button>
+          <button class="btn danger small" onclick="deleteRecorrente('${r.id}')">Excluir</button>
+        </td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  document.getElementById('recorrentesList').innerHTML = html || '<p class="muted">Nenhum item recorrente cadastrado.</p>';
+}
+function promptNovoValor(id){
+  const r = STATE.recorrentes.find(x=>x.id===id);
+  if(!r) return;
+  const mes = prompt('A partir de qual mês vale o novo valor? (formato AAAA-MM)', todayMonth());
+  if(!mes) return;
+  const valorStr = prompt('Novo valor mensal (R$) para "'+r.nome+'":');
+  if(valorStr===null) return;
+  const valor = parseFloat(valorStr.replace(',','.'));
+  if(isNaN(valor)){ toast('Valor inválido.'); return; }
+  r.historico = r.historico.filter(h=>h.mes!==mes);
+  r.historico.push({mes, valor});
+  r.historico.sort((a,b)=>a.mes.localeCompare(b.mes));
+  saveState(); toast('Valor atualizado!'); renderAll();
+}
+/* Sempre que um item recorrente (eterno) ganha uma data de término, ele
+   deixa de fazer sentido como "recorrente" e vira uma despesa com prazo
+   definido automaticamente — some sozinho depois do mês final. */
+function definirFimRecorrente(id){
+  const r = STATE.recorrentes.find(x=>x.id===id);
+  if(!r) return;
+  const mesFim = prompt('Mês em que "'+r.nome+'" termina (último mês em que ainda é cobrado, formato AAAA-MM):', todayMonth());
+  if(!mesFim) return;
+  STATE.recorrentes = STATE.recorrentes.filter(x=>x.id!==id);
+  r.mesFim = mesFim;
+  STATE.recorrentesTemporarios.push(r);
+  saveState();
+  toast('"'+r.nome+'" agora é uma despesa com prazo definido (aba Prazo Definido).');
+  renderAll();
+}
+function deleteRecorrente(id){
+  if(!confirm('Remover este item recorrente definitivamente?')) return;
+  STATE.recorrentes = STATE.recorrentes.filter(r=>r.id!==id);
+  saveState(); toast('Item removido.'); renderAll();
+}
+
+/* ================== DESPESAS COM PRAZO DEFINIDO ================== */
+document.getElementById('btnAddTmp').onclick=()=>{
+  const nome = document.getElementById('tmpNome').value.trim();
+  const grupo = document.getElementById('tmpGrupo').value.trim() || 'Outros';
+  const valor = parseFloat(document.getElementById('tmpValor').value);
+  const mesInicio = document.getElementById('tmpMesInicio').value;
+  const mesFim = document.getElementById('tmpMesFim').value || null;
+  if(!nome || isNaN(valor) || !mesInicio){ toast('Preencha nome, valor e mês de início.'); return; }
+  if(mesFim && mesFim < mesInicio){ toast('O mês fim não pode ser antes do mês início.'); return; }
+  STATE.recorrentesTemporarios.push({ id: uid('tmp'), nome, grupo, historico:[{mes:mesInicio, valor}], mesFim });
+  saveState();
+  document.getElementById('tmpNome').value='';
+  document.getElementById('tmpValor').value='';
+  document.getElementById('tmpMesInicio').value='';
+  document.getElementById('tmpMesFim').value='';
+  toast('Despesa adicionada!');
+  renderAll();
+};
+function promptNovoValorTmp(id){
+  const r = STATE.recorrentesTemporarios.find(x=>x.id===id);
+  if(!r) return;
+  const mes = prompt('A partir de qual mês vale o novo valor? (formato AAAA-MM)', todayMonth());
+  if(!mes) return;
+  const valorStr = prompt('Novo valor mensal (R$) para "'+r.nome+'":');
+  if(valorStr===null) return;
+  const valor = parseFloat(valorStr.replace(',','.'));
+  if(isNaN(valor)){ toast('Valor inválido.'); return; }
+  r.historico = r.historico.filter(h=>h.mes!==mes);
+  r.historico.push({mes, valor});
+  r.historico.sort((a,b)=>a.mes.localeCompare(b.mes));
+  saveState(); toast('Valor atualizado!'); renderAll();
+}
+function definirFimTmp(id){
+  const r = STATE.recorrentesTemporarios.find(x=>x.id===id);
+  if(!r) return;
+  const mes = prompt('Mês em que "'+r.nome+'" termina (último mês em que ainda é cobrado, formato AAAA-MM):', r.mesFim||todayMonth());
+  if(mes===null) return;
+  r.mesFim = mes.trim() || null;
+  saveState(); toast('Data de término atualizada!'); renderAll();
+}
+function deleteTmp(id){
+  if(!confirm('Remover esta despesa definitivamente?')) return;
+  STATE.recorrentesTemporarios = STATE.recorrentesTemporarios.filter(r=>r.id!==id);
+  saveState(); toast('Removido.'); renderAll();
+}
+function renderTemporarios(){
+  const hoje = todayMonth();
+  let rows = STATE.recorrentesTemporarios.map(r=>{
+    const atual = getRecorrenteValor(r, hoje);
+    const inicio = r.historico[0].mes;
+    let status;
+    if(r.mesFim && hoje > r.mesFim) status = `<span class="pill" style="background:rgba(240,97,107,.15);color:var(--red);">Encerrado em ${formatMes(r.mesFim)}</span>`;
+    else if(r.mesFim) status = `<span class="pill pago">Ativo até ${formatMes(r.mesFim)}</span>`;
+    else status = `<span class="pill planejado">Sem data de término definida</span>`;
+    const hist = r.historico.map(h=>`<span class="hist-tag">${formatMes(h.mes)}: ${fmtBRL(h.valor)}</span>`).join('');
+    return `<tr>
+      <td>${r.nome}<br><span class="muted" style="font-size:11.5px;">${r.grupo} · desde ${formatMes(inicio)}</span></td>
+      <td style="text-align:right;font-weight:600;">${fmtBRL(atual)}</td>
+      <td>${status}</td>
+      <td>${hist}</td>
+      <td class="actions">
+        <button class="btn secondary small" onclick="promptNovoValorTmp('${r.id}')">Alterar valor</button>
+        <button class="btn secondary small" onclick="definirFimTmp('${r.id}')">Definir término</button>
+        <button class="btn danger small" onclick="deleteTmp('${r.id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+  if(!STATE.recorrentesTemporarios.length) rows = `<tr><td colspan="5" class="muted">Nenhuma despesa com prazo definido cadastrada.</td></tr>`;
+  document.getElementById('tblTemporarios').innerHTML = `
+    <thead><tr><th>Nome</th><th style="text-align:right;">Valor atual</th><th>Status</th><th>Histórico</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+/* ================== PARCELAS ================== */
+/* A quantidade de parcelas (qtdParcelas) é a única fonte de verdade do
+   parcelamento — quantas parcelas restam é sempre calculado a partir dela
+   e do mês de início, sem depender de um "período" fixo exibido na tela.
+   Se a quantidade real for diferente da cadastrada (ex: apareciam 10x mas
+   na verdade faltam 11x pra pagar), edite o campo "Qtd" direto na tabela. */
+function parcelasRestantes(p){
+  const hoje = todayMonth();
+  const mesFim = monthAdd(p.mesInicio, p.qtdParcelas-1);
+  return Math.max(0, monthDiff(hoje, mesFim)+1);
+}
+function parcelaAtivaNoMes(p, mes){
+  const mesFim = monthAdd(p.mesInicio, p.qtdParcelas-1);
+  return mes >= p.mesInicio && mes <= mesFim;
+}
+
+/* Panorama: quanto fecha de parcelas no cartão num mês específico. */
+let selectedMesParcelas = todayMonth();
+function rangeMesesParcelas(){
+  let meses = STATE.parcelas.map(p=>p.mesInicio).concat(STATE.parcelas.map(p=>monthAdd(p.mesInicio,p.qtdParcelas-1)));
+  meses.push(todayMonth());
+  meses.sort();
+  return { start: meses[0], end: monthAdd(meses[meses.length-1], 3) };
+}
+function populateMesSelectParcelas(){
+  const {start,end} = rangeMesesParcelas();
+  const meses = monthRange(start,end);
+  const sel = document.getElementById('selMesParcelas');
+  sel.innerHTML = meses.map(m=>`<option value="${m}" ${m===selectedMesParcelas?'selected':''}>${formatMes(m)}</option>`).join('');
+}
+document.getElementById('prevMesParcelas').onclick=()=>{ selectedMesParcelas=monthAdd(selectedMesParcelas,-1); renderParcelas(); };
+document.getElementById('nextMesParcelas').onclick=()=>{ selectedMesParcelas=monthAdd(selectedMesParcelas,1); renderParcelas(); };
+document.getElementById('selMesParcelas').onchange=(e)=>{ selectedMesParcelas=e.target.value; renderParcelas(); };
+function renderPanoramaParcelas(){
+  populateMesSelectParcelas();
+  const ativos = STATE.parcelas.filter(p=>parcelaAtivaNoMes(p, selectedMesParcelas));
+  const total = ativos.reduce((s,p)=>s+p.valorParcela, 0);
+  document.getElementById('parcelasCards').innerHTML = `
+    <div class="card"><div class="label">Total de parcelas em ${formatMes(selectedMesParcelas)}</div><div class="value green">${fmtBRL(total)}</div></div>
+    <div class="card"><div class="label">Compras parceladas ativas</div><div class="value">${ativos.length}</div></div>
+  `;
+  let rows = ativos.slice().sort((a,b)=>b.valorParcela-a.valorParcela).map(p=>{
+    const numParcela = monthDiff(p.mesInicio, selectedMesParcelas)+1;
+    return `<tr>
+      <td>${p.descricao}</td>
+      <td style="text-align:center;">${numParcela}/${p.qtdParcelas}</td>
+      <td style="text-align:right;">${fmtBRL(p.valorParcela)}</td>
+    </tr>`;
+  }).join('');
+  if(!ativos.length) rows = `<tr><td colspan="3" class="muted">Nenhuma parcela ativa nesse mês.</td></tr>`;
+  else rows += `<tr class="total-row"><td colspan="2">Total do mês</td><td style="text-align:right;">${fmtBRL(total)}</td></tr>`;
+  document.getElementById('tblParcelasMes').innerHTML = `
+    <thead><tr><th>Descrição</th><th>Parcela</th><th style="text-align:right;">Valor</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+function renderParcelas(){
+  renderPanoramaParcelas();
+  const onlyActive = document.getElementById('onlyActiveParcelas').checked;
+  let list = STATE.parcelas.slice().sort((a,b)=>a.mesInicio.localeCompare(b.mesInicio));
+  if(onlyActive) list = list.filter(p=> parcelasRestantes(p) > 0 );
+  let rows = list.map(p=>{
+    const restantes = parcelasRestantes(p);
+    const status = restantes<=0 ? 'Quitado' : (restantes+'x restantes');
+    const valorTotal = p.valorParcela * p.qtdParcelas;
+    return `<tr>
+      <td>${p.descricao}<br><span class="muted" style="font-size:11.5px;">desde ${formatMes(p.mesInicio)}${p.categoria?' · '+p.categoria:''}</span></td>
+      <td style="text-align:right;">${fmtBRL(p.valorParcela)}</td>
+      <td style="text-align:center;"><input type="number" min="0" step="1" value="${p.qtdParcelas}" style="width:70px;text-align:center;" onchange="editarQtdParcela('${p.id}', this.value)"></td>
+      <td style="text-align:right;">${fmtBRL(valorTotal)}</td>
+      <td>${status}</td>
+      <td class="actions"><button class="btn secondary small" onclick="iniciarEdicaoLan('${p.id}')">Editar</button><button class="btn danger small" onclick="deleteParcela('${p.id}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
+  if(!list.length) rows = `<tr><td colspan="6" class="muted">Nenhum parcelamento encontrado.</td></tr>`;
+  document.getElementById('tblParcelas').innerHTML = `
+    <thead><tr><th>Descrição</th><th style="text-align:right;">Valor/parcela</th><th>Qtd (total de vezes)</th><th style="text-align:right;">Valor total da compra</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+document.getElementById('onlyActiveParcelas').onchange = renderParcelas;
+function editarQtdParcela(id, novoValor){
+  const p = STATE.parcelas.find(x=>x.id===id);
+  if(!p) return;
+  const qtd = parseInt(novoValor);
+  if(isNaN(qtd) || qtd<0){ toast('Quantidade inválida.'); renderParcelas(); return; }
+  p.qtdParcelas = qtd;
+  saveState(); toast('Quantidade de parcelas atualizada!'); renderAll();
+}
+function deleteParcela(id){
+  if(!confirm('Remover este parcelamento?')) return;
+  STATE.parcelas = STATE.parcelas.filter(p=>p.id!==id);
+  saveState(); toast('Removido.'); renderAll();
+}
+
+/* ================== REFORMA DO APTO ================== */
+document.getElementById('btnAddApto').onclick=()=>{
+  const categoria = document.getElementById('aptoCat').value.trim() || 'Outros';
+  const ambiente = document.getElementById('aptoAmb').value.trim();
+  const item = document.getElementById('aptoItem').value.trim();
+  const total = parseFloat(document.getElementById('aptoTotal').value);
+  const loja = document.getElementById('aptoLoja').value.trim();
+  if(!item || isNaN(total)){ toast('Preencha ao menos item e valor total.'); return; }
+  STATE.aptoPlanejado.push({ id: uid('aptoi'), categoria, ambiente, item, frete:0, aVista:total, parcela:0, qtdX:0, parcelado:0, loja, marca:'', total, link:null, status:'Planejado', lancamentoRef:null });
+  saveState();
+  ['aptoCat','aptoAmb','aptoItem','aptoTotal','aptoLoja'].forEach(id=>document.getElementById(id).value='');
+  toast('Item adicionado!');
+  renderAll();
+};
+document.getElementById('searchApto').oninput = renderApto;
+/* Edita os dados do próprio item da reforma (categoria, ambiente, nome,
+   valor total, loja) — funciona tanto pra itens pendentes quanto já
+   lançados. Editar o valor total aqui NÃO ajusta a parcela/boleto já
+   lançado; pra isso use "Editar lançamento". */
+function editarItemApto(id){
+  const item = STATE.aptoPlanejado.find(x=>x.id===id);
+  if(!item) return;
+  const categoria = prompt('Categoria:', item.categoria||'');
+  if(categoria===null) return;
+  const ambiente = prompt('Ambiente:', item.ambiente||'');
+  if(ambiente===null) return;
+  const nome = prompt('Item:', item.item||'');
+  if(nome===null) return;
+  const totalStr = prompt('Valor total (R$):', item.total);
+  if(totalStr===null) return;
+  const loja = prompt('Loja:', item.loja||'');
+  if(loja===null) return;
+  const total = parseFloat(totalStr.toString().replace(',','.'));
+  if(!nome || isNaN(total)){ toast('Dados inválidos.'); return; }
+  item.categoria = categoria.trim() || 'Outros';
+  item.ambiente = ambiente.trim();
+  item.item = nome.trim();
+  item.total = total;
+  item.loja = loja.trim();
+  saveState(); toast('Item atualizado!'); renderAll();
+}
+function removerLancamentoVinculado(item){
+  if(!item.lancamentoRef) return;
+  if(item.lancamentoRef.aba==='parcelas'){
+    STATE.parcelas = STATE.parcelas.filter(p=>p.id!==item.lancamentoRef.id);
+  } else if(item.lancamentoRef.aba==='temporarios'){
+    STATE.recorrentesTemporarios = STATE.recorrentesTemporarios.filter(t=>t.id!==item.lancamentoRef.id);
+  }
+}
+function deleteAptoItem(id){
+  const item = STATE.aptoPlanejado.find(x=>x.id===id);
+  let msg = 'Remover este item?';
+  if(item && item.lancamentoRef) msg = 'Este item já foi lançado (parcela/boleto). Remover também vai apagar o lançamento vinculado. Continuar?';
+  if(!confirm(msg)) return;
+  if(item) removerLancamentoVinculado(item);
+  STATE.aptoPlanejado = STATE.aptoPlanejado.filter(x=>x.id!==id);
+  saveState(); toast('Removido.'); renderAll();
+}
+/* Desfaz o lançamento (apaga a parcela/boleto vinculado) e devolve o item
+   pra lista de "a comprar / lançar pagamento", sem excluir o item da reforma. */
+function desfazerLancamentoApto(id){
+  const item = STATE.aptoPlanejado.find(x=>x.id===id);
+  if(!item || !item.lancamentoRef) return;
+  if(!confirm('Desfazer esse lançamento? Isso apaga a parcela/boleto vinculado e o item volta pra lista de pendentes.')) return;
+  removerLancamentoVinculado(item);
+  item.lancamentoRef = null;
+  item.status = 'Planejado';
+  saveState(); toast('Lançamento desfeito.'); renderAll();
+}
+/* Edita o valor/quantidade/mês do lançamento já vinculado ao item,
+   sem precisar desfazer e lançar tudo de novo. */
+function editarLancamentoApto(id){
+  const item = STATE.aptoPlanejado.find(x=>x.id===id);
+  if(!item || !item.lancamentoRef) return;
+  if(item.lancamentoRef.aba==='parcelas'){
+    const p = STATE.parcelas.find(x=>x.id===item.lancamentoRef.id);
+    if(!p){ toast('Lançamento vinculado não encontrado.'); return; }
+    const novoMes = prompt('Mês da 1ª parcela (AAAA-MM):', p.mesInicio);
+    if(novoMes===null) return;
+    const novoValorStr = prompt('Valor de cada parcela (R$):', p.valorParcela);
+    if(novoValorStr===null) return;
+    const novaQtdStr = prompt('Quantidade de parcelas:', p.qtdParcelas);
+    if(novaQtdStr===null) return;
+    const valor = parseFloat(novoValorStr.toString().replace(',','.'));
+    const qtd = parseInt(novaQtdStr);
+    if(!novoMes || isNaN(valor) || isNaN(qtd) || qtd<1){ toast('Dados inválidos.'); return; }
+    p.mesInicio = novoMes; p.valorParcela = valor; p.qtdParcelas = qtd;
+  } else if(item.lancamentoRef.aba==='temporarios'){
+    const t = STATE.recorrentesTemporarios.find(x=>x.id===item.lancamentoRef.id);
+    if(!t){ toast('Lançamento vinculado não encontrado.'); return; }
+    const mesAtual = t.historico[0].mes;
+    const valorAtual = t.historico[0].valor;
+    const novoMes = prompt('Mês do 1º pagamento (AAAA-MM):', mesAtual);
+    if(novoMes===null) return;
+    const novoValorStr = prompt('Valor pago por mês (R$):', valorAtual);
+    if(novoValorStr===null) return;
+    const novoMesFim = prompt('Mês do último pagamento (AAAA-MM, deixe igual ao início se for à vista):', t.mesFim||novoMes);
+    if(novoMesFim===null) return;
+    const valor = parseFloat(novoValorStr.toString().replace(',','.'));
+    if(!novoMes || isNaN(valor)){ toast('Dados inválidos.'); return; }
+    t.historico = [{mes:novoMes, valor}];
+    t.mesFim = novoMesFim || novoMes;
+  }
+  saveState(); toast('Lançamento atualizado!'); renderAll();
+}
+/* Direciona o pagamento de um item da reforma pro fluxo de caixa:
+   - Parcelado no cartão  -> aba Parcelas (Cartão)
+   - À vista / boleto     -> aba Prazo Definido (número de parcelas do boleto define o mesFim) */
+function lancarPagamentoApto(id){
+  const item = STATE.aptoPlanejado.find(x=>x.id===id);
+  if(!item) return;
+  if(item.lancamentoRef){
+    if(!confirm('Este item já foi lançado antes. Lançar de novo vai criar um lançamento duplicado. Continuar?')) return;
+  }
+  const tipo = prompt('Como esse item vai ser pago?\n1 = Parcelado no cartão\n2 = À vista\n3 = Boleto (várias vezes, ex: 4x)', '1');
+  if(tipo===null) return;
+  const mesRef = prompt('Mês do pagamento (1ª parcela/pagamento), formato AAAA-MM:', todayMonth());
+  if(!mesRef) return;
+
+  if(tipo.trim()==='1'){
+    // Mesma lógica do lançamento novo: só pergunta em quantas vezes — o
+    // valor da parcela é sempre calculado sozinho (total do item ÷ qtd),
+    // sem precisar perguntar/confirmar valor nenhum.
+    const qtdSugerida = item.qtdX>0 ? item.qtdX : 10;
+    const qtdStr = prompt('Em quantas vezes foi parcelado no cartão?', qtdSugerida);
+    if(qtdStr===null) return;
+    const qtdParcelas = parseInt(qtdStr);
+    if(isNaN(qtdParcelas) || qtdParcelas<1){ toast('Quantidade de parcelas inválida.'); return; }
+    const valorParcela = Math.round((item.total/qtdParcelas)*100)/100;
+    const novo = { id: uid('parc'), descricao: item.item, mesInicio: mesRef, qtdParcelas, valorParcela };
+    STATE.parcelas.push(novo);
+    item.lancamentoRef = { aba:'parcelas', id: novo.id };
+  } else if(tipo.trim()==='2'){
+    const novo = { id: uid('tmp'), nome: item.item, grupo: 'Reforma', historico:[{mes:mesRef, valor:item.total}], mesFim: mesRef };
+    STATE.recorrentesTemporarios.push(novo);
+    item.lancamentoRef = { aba:'temporarios', id: novo.id };
+  } else if(tipo.trim()==='3'){
+    const vezesStr = prompt('Em quantas vezes é o boleto?', '4');
+    const vezes = parseInt(vezesStr);
+    if(isNaN(vezes) || vezes<1){ toast('Quantidade de vezes inválida.'); return; }
+    const valorParcela = Math.round((item.total/vezes)*100)/100;
+    const mesFim = monthAdd(mesRef, vezes-1);
+    const novo = { id: uid('tmp'), nome: item.item, grupo: 'Reforma', historico:[{mes:mesRef, valor:valorParcela}], mesFim };
+    STATE.recorrentesTemporarios.push(novo);
+    item.lancamentoRef = { aba:'temporarios', id: novo.id };
+  } else {
+    toast('Opção inválida.'); return;
+  }
+  item.status = 'Lançado';
+  saveState();
+  toast('Pagamento lançado!');
+  renderAll();
+}
+/* Quanto do item já foi efetivamente pago até hoje (não o valor total),
+   olhando pra parcela/boleto vinculado e contando só o que já venceu. */
+function valorPagoApto(item){
+  if(!item.lancamentoRef) return 0;
+  const hoje = todayMonth();
+  if(item.lancamentoRef.aba==='parcelas'){
+    const p = STATE.parcelas.find(x=>x.id===item.lancamentoRef.id);
+    if(!p) return 0;
+    const mesLimite = hoje < p.mesInicio ? null : (hoje < monthAdd(p.mesInicio,p.qtdParcelas-1) ? hoje : monthAdd(p.mesInicio,p.qtdParcelas-1));
+    if(mesLimite===null) return 0;
+    const parcelasVencidas = Math.min(p.qtdParcelas, monthDiff(p.mesInicio, mesLimite)+1);
+    return Math.max(0, parcelasVencidas) * p.valorParcela;
+  }
+  if(item.lancamentoRef.aba==='temporarios'){
+    const t = STATE.recorrentesTemporarios.find(x=>x.id===item.lancamentoRef.id);
+    if(!t) return 0;
+    let pago = 0;
+    const inicio = t.historico[0].mes;
+    const fim = t.mesFim || hoje;
+    monthRange(inicio, fim).forEach(m=>{ if(m<=hoje) pago += getRecorrenteValor(t, m); });
+    return pago;
+  }
+  return 0;
+}
+/* Em qual parcela/mês o item está agora, tipo "2/10" — só faz sentido pra
+   quem tem uma contagem definida (parcelado no cartão, ou boleto/prazo
+   definido com data pra terminar). Retorna null quando não dá pra calcular
+   (ex: recorrente sem data de fim). */
+function parcelaAtualApto(item){
+  if(!item.lancamentoRef) return null;
+  const hoje = todayMonth();
+  if(item.lancamentoRef.aba==='parcelas'){
+    const p = STATE.parcelas.find(x=>x.id===item.lancamentoRef.id);
+    if(!p) return null;
+    if(hoje < p.mesInicio) return 'começa em '+formatMes(p.mesInicio);
+    const idx = Math.min(p.qtdParcelas, monthDiff(p.mesInicio, hoje)+1);
+    return idx+'/'+p.qtdParcelas;
+  }
+  if(item.lancamentoRef.aba==='temporarios'){
+    const t = STATE.recorrentesTemporarios.find(x=>x.id===item.lancamentoRef.id);
+    if(!t) return null;
+    const inicio = t.historico[0].mes;
+    if(hoje < inicio) return 'começa em '+formatMes(inicio);
+    if(!t.mesFim) return null;
+    const total = monthDiff(inicio, t.mesFim)+1;
+    const idx = Math.min(total, monthDiff(inicio, hoje)+1);
+    return idx+'/'+total;
+  }
+  return null;
+}
+function statusApto(item){
+  if(!item.lancamentoRef) return {texto:'Planejado', classe:'planejado'};
+  const pago = valorPagoApto(item);
+  if(pago >= item.total - 0.01) return {texto:'Quitado', classe:'pago'};
+  return {texto:'Em pagamento', classe:'planejado'};
+}
+function renderApto(){
+  const q = (document.getElementById('searchApto').value||'').toLowerCase();
+  let list = STATE.aptoPlanejado.slice();
+  if(q) list = list.filter(i=> (i.item||'').toLowerCase().includes(q) || (i.categoria||'').toLowerCase().includes(q) || (i.ambiente||'').toLowerCase().includes(q));
+  const pendentes = list.filter(i=>!i.lancamentoRef);
+  const lancados = list.filter(i=>i.lancamentoRef);
+
+  const totalGeral = STATE.aptoPlanejado.reduce((s,i)=>s+(i.total||0),0);
+  const totalPago = STATE.aptoPlanejado.reduce((s,i)=>s+valorPagoApto(i),0);
+  const totalAPagar = totalGeral - totalPago;
+  // "Falta comprar" = só os itens ainda nem lançados (nem parcelado nem à
+  // vista/boleto) — diferente de "ainda a pagar", que inclui também parcelas
+  // futuras de itens que já foram comprados/lançados.
+  const totalFaltaComprar = pendentes.reduce((s,i)=>s+(i.total||0),0);
+  document.getElementById('aptoCards').innerHTML = `
+    <div class="card"><div class="label">Total geral (reforma/mobília)</div><div class="value">${fmtBRL(totalGeral)}</div></div>
+    <div class="card"><div class="label">Valor pago até agora</div><div class="value green">${fmtBRL(totalPago)}</div></div>
+    <div class="card"><div class="label">Ainda a pagar</div><div class="value">${fmtBRL(totalAPagar)}</div></div>
+    <div class="card"><div class="label">Falta comprar (${pendentes.length} ${pendentes.length===1?'item':'itens'})</div><div class="value red">${fmtBRL(totalFaltaComprar)}</div></div>
+  `;
+
+  let rowsPendentes = pendentes.map(i=>`<tr>
+    <td>${i.categoria||''}</td><td>${i.ambiente||''}</td><td>${i.item||''}</td>
+    <td style="text-align:right;">${fmtBRL(i.total)}</td>
+    <td>${i.loja||''}</td>
+    <td class="link-cell">${i.link?`<a href="${i.link}" target="_blank">ver ↗</a>`:''}</td>
+    <td class="actions">
+      <button class="btn secondary small" onclick="editarItemApto('${i.id}')">Editar item</button>
+      <button class="btn secondary small" onclick="lancarPagamentoApto('${i.id}')">Lançar pagamento</button>
+      <button class="btn danger small" onclick="deleteAptoItem('${i.id}')">Excluir</button>
+    </td>
+  </tr>`).join('');
+  if(!pendentes.length) rowsPendentes = `<tr><td colspan="7" class="muted">Nenhum item pendente — tudo já foi lançado.</td></tr>`;
+  document.getElementById('tblAptoPendente').innerHTML = `
+    <thead><tr><th>Categoria</th><th>Ambiente</th><th>Item</th><th style="text-align:right;">Total</th><th>Loja</th><th>Link</th><th></th></tr></thead>
+    <tbody>${rowsPendentes}</tbody>`;
+
+  let rowsLancados = lancados.map(i=>{
+    const pago = valorPagoApto(i);
+    const st = statusApto(i);
+    const destino = i.lancamentoRef.aba==='parcelas' ? 'Parcelas (Cartão)' : 'Prazo Definido';
+    const parcelaInfo = parcelaAtualApto(i);
+    return `<tr>
+    <td>${i.categoria||''}</td><td>${i.ambiente||''}</td>
+    <td>${i.item||''}<br><span class="muted" style="font-size:11px;">lançado em ${destino}${parcelaInfo?' — parcela '+parcelaInfo:''}</span></td>
+    <td style="text-align:right;">${fmtBRL(i.total)}</td>
+    <td style="text-align:right;">${fmtBRL(pago)}</td>
+    <td><span class="pill ${st.classe}">${st.texto}</span></td>
+    <td class="actions">
+      <button class="btn secondary small" onclick="editarItemApto('${i.id}')">Editar item</button>
+      <button class="btn secondary small" onclick="editarLancamentoApto('${i.id}')">Editar lançamento</button>
+      <button class="btn secondary small" onclick="desfazerLancamentoApto('${i.id}')">Desfazer</button>
+      <button class="btn danger small" onclick="deleteAptoItem('${i.id}')">Excluir</button>
+    </td>
+  </tr>`;
+  }).join('');
+  if(!lancados.length) rowsLancados = `<tr><td colspan="7" class="muted">Nenhum item lançado ainda.</td></tr>`;
+  document.getElementById('tblAptoLancado').innerHTML = `
+    <thead><tr><th>Categoria</th><th>Ambiente</th><th>Item</th><th style="text-align:right;">Total</th><th style="text-align:right;">Pago até agora</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rowsLancados}</tbody>`;
+}
+
+/* ================== APLICAÇÕES ================== */
+document.getElementById('btnSetSaldoBase').onclick=()=>{
+  const mes = document.getElementById('investMesBase').value.trim();
+  const valorStr = document.getElementById('investSaldoBase').value;
+  if(!/^\d{4}-\d{2}$/.test(mes)){ toast('Informe o mês no formato AAAA-MM.'); return; }
+  const valor = parseFloat(valorStr);
+  if(isNaN(valor)){ toast('Valor inválido.'); return; }
+  STATE.investimentos = { mesInicial: mes, saldoInicial: valor };
+  saveState(); toast('Saldo base definido!'); renderAll();
+};
+/* Busca o histórico real do CDI (% acumulado no mês) direto da série 4391
+   do Banco Central — cada mês passado fica com o valor real daquele mês, e
+   o computeSaldoInvestido usa o último valor conhecido pros meses futuros
+   (mesmo mecanismo de "vale até mudar" usado no resto do app). Roda sozinho
+   ao abrir o arquivo (silencioso) e também pode ser forçado pelo botão. */
+async function atualizarCDIAutomatico(silencioso){
+  try{
+    const hoje = new Date();
+    const dataFinal = pad2(hoje.getDate())+'/'+pad2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
+    const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.4391/dados?formato=json&dataInicial=01/01/2020&dataFinal='+dataFinal;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const dados = await resp.json();
+    if(!Array.isArray(dados) || !dados.length) throw new Error('resposta vazia');
+    const historico = dados.map(d=>{
+      const [dia,mesNum,ano] = d.data.split('/');
+      return { mes: ano+'-'+mesNum, valor: parseFloat(d.valor.replace(',','.')) };
+    }).sort((a,b)=>a.mes.localeCompare(b.mes));
+    STATE.cdiMensal = historico;
+    STATE._cdiAtualizadoEm = Date.now();
+    saveStateInterno('cdi');
+    if(!silencioso) toast('CDI atualizado com dados do Banco Central!');
+    renderAll();
+  }catch(e){
+    console.warn('Não foi possível atualizar o CDI automaticamente:', e);
+    if(!silencioso) toast('Não consegui buscar o CDI agora (sem internet ou API fora do ar). Mantendo o último valor conhecido.');
+  }
+}
+document.getElementById('btnAtualizarCDI').onclick=()=>atualizarCDIAutomatico(false);
+/* Salário varia todo mês, então em vez do modelo "vale até mudar" (como
+   nas Recorrentes), aqui é editado mês a mês igual ao consumo do cartão —
+   sempre o valor exato daquele mês, sem precisar reajuste. */
+let selectedMesSalario = todayMonth();
+function rangeMesesSalario(){
+  let meses = STATE.salarioHenrique.map(s=>s.mes).concat(STATE.salarioJuliana.map(s=>s.mes));
+  // Sempre permite voltar pelo menos 24 meses, mesmo sem nenhum salário
+  // lançado ainda — pra dar pra completar o histórico passado aos poucos.
+  meses.push(todayMonth(), monthAdd(todayMonth(), 12), monthAdd(todayMonth(), -24));
+  if(STATE.investimentos && STATE.investimentos.mesInicial) meses.push(STATE.investimentos.mesInicial);
+  meses.sort();
+  return { start: meses[0], end: meses[meses.length-1] };
+}
+function populateMesSelectSalario(){
+  const {start,end} = rangeMesesSalario();
+  const meses = monthRange(start,end);
+  const sel = document.getElementById('selMesSalario');
+  sel.innerHTML = meses.map(m=>`<option value="${m}" ${m===selectedMesSalario?'selected':''}>${formatMes(m)}</option>`).join('');
+}
+document.getElementById('prevMesSalario').onclick=()=>{ selectedMesSalario=monthAdd(selectedMesSalario,-1); renderInvestimentos(); };
+document.getElementById('nextMesSalario').onclick=()=>{ selectedMesSalario=monthAdd(selectedMesSalario,1); renderInvestimentos(); };
+document.getElementById('selMesSalario').onchange=(e)=>{ selectedMesSalario=e.target.value; renderInvestimentos(); };
+function upsertValorMes(arr, mes, valor){
+  const entry = arr.find(x=>x.mes===mes);
+  if(entry) entry.valor = valor; else arr.push({mes, valor});
+  arr.sort((a,b)=>a.mes.localeCompare(b.mes));
+}
+document.getElementById('btnSalvarSalarioMes').onclick=()=>{
+  const valorH = parseFloat(document.getElementById('salarioMesHenrique').value);
+  const valorJ = parseFloat(document.getElementById('salarioMesJuliana').value);
+  if(isNaN(valorH) || isNaN(valorJ) || valorH<0 || valorJ<0){ toast('Informe os dois valores.'); return; }
+  upsertValorMes(STATE.salarioHenrique, selectedMesSalario, valorH);
+  upsertValorMes(STATE.salarioJuliana, selectedMesSalario, valorJ);
+  saveState(); toast('Salário do mês salvo!'); renderAll();
+};
+document.getElementById('btnSalvarSalarioRef').onclick=()=>{
+  const refHStr = document.getElementById('salarioRefHenrique').value;
+  const refJStr = document.getElementById('salarioRefJuliana').value;
+  const refH = refHStr.trim()==='' ? null : parseFloat(refHStr);
+  const refJ = refJStr.trim()==='' ? null : parseFloat(refJStr);
+  if((refH!==null && isNaN(refH)) || (refJ!==null && isNaN(refJ))){ toast('Valor inválido.'); return; }
+  STATE.investimentos.salarioRefHenrique = refH;
+  STATE.investimentos.salarioRefJuliana = refJ;
+  saveState(); toast('Referência de projeção salva!'); renderAll();
+};
+
+/* Saldo REAL das aplicações, lançado por você no fechamento de cada mês —
+   fica lado a lado com o saldo PROJETADO (que só usa CDI + o que faltou no
+   mês) pra você conferir se a projeção está batendo com a realidade. */
+let selectedMesSaldoReal = todayMonth();
+function rangeMesesSaldoReal(){
+  let meses = STATE.saldoReal.map(s=>s.mes);
+  // Sempre permite voltar pelo menos 24 meses, mesmo antes do saldo base ou
+  // de qualquer lançamento — pra dar pra ir alimentando um histórico recente
+  // aos poucos, sem depender de já ter configurado a projeção.
+  meses.push(todayMonth(), monthAdd(todayMonth(), -24));
+  if(STATE.investimentos && STATE.investimentos.mesInicial) meses.push(STATE.investimentos.mesInicial);
+  meses.sort();
+  return { start: meses[0], end: meses[meses.length-1] };
+}
+function populateMesSelectSaldoReal(){
+  const {start,end} = rangeMesesSaldoReal();
+  const meses = monthRange(start,end);
+  const sel = document.getElementById('selMesSaldoReal');
+  sel.innerHTML = meses.map(m=>`<option value="${m}" ${m===selectedMesSaldoReal?'selected':''}>${formatMes(m)}</option>`).join('');
+}
+document.getElementById('prevMesSaldoReal').onclick=()=>{ selectedMesSaldoReal=monthAdd(selectedMesSaldoReal,-1); renderInvestimentos(); };
+document.getElementById('nextMesSaldoReal').onclick=()=>{ selectedMesSaldoReal=monthAdd(selectedMesSaldoReal,1); renderInvestimentos(); };
+document.getElementById('selMesSaldoReal').onchange=(e)=>{ selectedMesSaldoReal=e.target.value; renderInvestimentos(); };
+document.getElementById('btnSalvarSaldoReal').onclick=()=>{
+  const valor = parseFloat(document.getElementById('saldoRealMesValor').value);
+  if(isNaN(valor) || valor<0){ toast('Valor inválido.'); return; }
+  upsertValorMes(STATE.saldoReal, selectedMesSaldoReal, valor);
+  saveState(); toast('Saldo real do mês salvo!'); renderAll();
+};
+
+function renderCdiAtual(){
+  const hist = STATE.cdiMensal||[];
+  if(!hist.length){
+    document.getElementById('cdiAtual').innerHTML = '<span class="muted">Ainda não foi possível buscar os dados do Banco Central. Clique em "Atualizar CDI" (precisa de internet).</span>';
+    return;
+  }
+  const mesRef = monthAdd(todayMonth(), -1);
+  const atualizadoEm = STATE._cdiAtualizadoEm ? new Date(STATE._cdiAtualizadoEm).toLocaleString('pt-BR') : '—';
+  document.getElementById('cdiAtual').innerHTML =
+    `<span class="hist-tag">CDI de ${formatMes(mesRef)}: ${getValorNoMes(hist, mesRef).toFixed(2)}% a.m.</span>`+
+    `<span class="muted" style="font-size:12px;"> · último mês fechado (só informativo). A projeção de saldo usa, em todos os meses, CDI fixo conservador de ${CDI_PROJECAO_PCT.toFixed(2)}% a.m.`+
+    ` · atualizado em ${atualizadoEm}</span>`;
+}
+
+let chartInvest = null;
+// Mesmo padrão de janela de visualização do Dashboard principal, só que
+// independente dele (cada aba guarda sua própria escolha de período).
+let mesesProjecaoInvest = 12;
+let modoInicioInvest = '12m';
+document.getElementById('selProjecaoInvest').onchange=(e)=>{ mesesProjecaoInvest=parseInt(e.target.value); renderInvestimentos(); };
+document.getElementById('selInicioInvest').onchange=(e)=>{ modoInicioInvest=e.target.value; renderInvestimentos(); };
+function renderInvestimentos(){
+  const hoje = todayMonth();
+  const cfg = STATE.investimentos||{};
+  document.getElementById('investMesBase').value = cfg.mesInicial || '';
+  document.getElementById('investSaldoBase').value = cfg.saldoInicial!=null ? cfg.saldoInicial : '';
+  renderCdiAtual();
+
+  // Editor de salário do mês — mostra o valor exato já lançado nesse mês
+  // (em branco se ainda não foi lançado), diferente do valor "vigente" usado
+  // nos cálculos, que usa o último mês lançado como referência.
+  populateMesSelectSalario();
+  const entryH = STATE.salarioHenrique.find(s=>s.mes===selectedMesSalario);
+  const entryJ = STATE.salarioJuliana.find(s=>s.mes===selectedMesSalario);
+  document.getElementById('salarioMesHenrique').value = entryH ? entryH.valor : '';
+  document.getElementById('salarioMesJuliana').value = entryJ ? entryJ.valor : '';
+  document.getElementById('salarioRefHenrique').value = cfg.salarioRefHenrique!=null ? cfg.salarioRefHenrique : '';
+  document.getElementById('salarioRefJuliana').value = cfg.salarioRefJuliana!=null ? cfg.salarioRefJuliana : '';
+
+  // Editor do saldo real (fechamento do mês) — mesmo padrão: mostra o valor
+  // exato já lançado nesse mês, em branco se ainda não foi lançado.
+  populateMesSelectSaldoReal();
+  const entrySaldoReal = STATE.saldoReal.find(s=>s.mes===selectedMesSaldoReal);
+  document.getElementById('saldoRealMesValor').value = entrySaldoReal ? entrySaldoReal.valor : '';
+
+  const salarioAtualH = getSalarioPessoa(STATE.salarioHenrique, cfg.salarioRefHenrique, hoje);
+  const salarioAtualJ = getSalarioPessoa(STATE.salarioJuliana, cfg.salarioRefJuliana, hoje);
+  document.getElementById('salarioCards').innerHTML = `
+    <div class="card"><div class="label">Salário Henrique usado no mês vigente</div><div class="value">${fmtBRL(salarioAtualH)}</div></div>
+    <div class="card"><div class="label">Salário Juliana usado no mês vigente</div><div class="value">${fmtBRL(salarioAtualJ)}</div></div>
+  `;
+
+  const saldoHoje = computeSaldoInvestido(hoje);
+  const saldoRealHoje = STATE.saldoReal.find(s=>s.mes===hoje);
+  const {diferenca} = faltaOuSobraMes(hoje);
+  const cards = [
+    { label:'Saldo aplicado (projetado, hoje)', value: saldoHoje!=null ? fmtBRL(saldoHoje) : '— (defina o saldo base)', cls: saldoHoje!=null?'green':'' },
+    { label:'Saldo real (hoje)', value: saldoRealHoje ? fmtBRL(saldoRealHoje.valor) : '— (ainda não lançado)', cls: saldoRealHoje?'green':'' },
+    { label: diferenca<0 ? 'Falta este mês (sai das aplicações)' : 'Sobra este mês (não entra automático)', value: fmtBRL(Math.abs(diferenca)), cls: diferenca<0 ? 'red' : 'green' },
+  ];
+  document.getElementById('investCards').innerHTML = cards.map(c=>`
+    <div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>
+  `).join('');
+
+  // Mesma janela usada no gráfico e na tabela — 12 meses atrás (ou desde o
+  // saldo base, o que vier depois) até 12 meses à frente de hoje, igual ao
+  // padrão do Dashboard principal.
+  const ctxCanvas = document.getElementById('chartInvest').getContext('2d');
+  if(!cfg.mesInicial){
+    if(chartInvest){ chartInvest.destroy(); chartInvest=null; }
+    document.getElementById('tblInvestimentos').innerHTML = `<tr><td colspan="9" class="muted">Defina o saldo base acima pra ver a evolução mês a mês.</td></tr>`;
+    document.getElementById('backtestResumo').textContent = '';
+    renderInvestimentosAporte(null);
+    return;
+  }
+  const inicioPadrao = monthAdd(hoje, -12);
+  let inicioJanela = modoInicioInvest==='inicio' ? cfg.mesInicial : (cfg.mesInicial > inicioPadrao ? cfg.mesInicial : inicioPadrao);
+  // Se já existir saldo real lançado antes da janela (ex: histórico lançado
+  // aos poucos, até antes do saldo base existir), estende pra incluir —
+  // mesmo que o projetado ainda não dê pra calcular tão pra trás.
+  if(STATE.saldoReal.length){
+    const maisAntigoReal = STATE.saldoReal.map(s=>s.mes).sort()[0];
+    if(maisAntigoReal < inicioJanela) inicioJanela = maisAntigoReal;
+  }
+  // Mesma lógica pros salários lançados no passado — se tiver histórico
+  // mais antigo que a janela, mostra ele também.
+  const mesesSalarioLancados = STATE.salarioHenrique.map(s=>s.mes).concat(STATE.salarioJuliana.map(s=>s.mes));
+  if(mesesSalarioLancados.length){
+    const maisAntigoSalario = mesesSalarioLancados.sort()[0];
+    if(maisAntigoSalario < inicioJanela) inicioJanela = maisAntigoSalario;
+  }
+  const fimJanela = monthAdd(hoje, mesesProjecaoInvest);
+  const meses = monthRange(inicioJanela, fimJanela);
+  const evolucao = meses.map(m=>{
+    const {custo, salario, diferenca} = faltaOuSobraMes(m);
+    const real = STATE.saldoReal.find(s=>s.mes===m);
+    return { mes:m, custo, salario, diferenca, saldo: computeSaldoInvestido(m), saldoReal: real ? real.valor : null, saldoAtualizado: computeSaldoAtualizado(m) };
+  });
+
+  if(chartInvest) chartInvest.destroy();
+  const hojeIdx = meses.indexOf(hoje);
+  chartInvest = new Chart(ctxCanvas, {
+    data:{
+      labels: meses.map(formatMes),
+      datasets:[
+        { type:'bar', label:'Salário total', data: evolucao.map(e=>e.salario), backgroundColor:'rgba(91,141,239,0.55)', yAxisID:'y', order:2 },
+        { type:'bar', label:'Custo do mês', data: evolucao.map(e=>e.custo), backgroundColor:'rgba(240,97,107,0.55)', yAxisID:'y', order:2 },
+        { type:'line', label:'Saldo aplicado (projetado)', data: evolucao.map(e=>e.saldo), borderColor:'#4fd1a5', backgroundColor:'#4fd1a5', tension:0.25, yAxisID:'y1', order:1, pointRadius:2, pointHoverRadius:5 },
+        { type:'line', label:'Saldo real (lançado)', data: evolucao.map(e=>e.saldoReal), borderColor:'#f2b94b', backgroundColor:'#f2b94b', borderDash:[5,4], spanGaps:true, yAxisID:'y1', order:1, pointRadius:4, pointHoverRadius:7 },
+        { type:'line', label:'Saldo atualizado (projeção a partir do último real)', data: evolucao.map(e=>e.saldoAtualizado), borderColor:'#ffffff', backgroundColor:'#ffffff', tension:0.25, yAxisID:'y1', order:0, pointRadius:2, pointHoverRadius:5 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      // Mostra todas as linhas/barras daquele mês juntas no tooltip ao
+      // passar o mouse perto (não precisa acertar exatamente em cima da
+      // linha branca) — assim dá pra comparar projetado, real e atualizado
+      // lado a lado no mesmo mês.
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{position:'bottom'}, tooltip:{mode:'index', intersect:false, callbacks:{label:(c)=>c.dataset.label+': '+(c.parsed.y!=null?fmtBRL(c.parsed.y):'—')}} },
+      scales:{
+        y:{ position:'left', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{color:'#2a3446'} },
+        y1:{ position:'right', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{display:false} },
+        x:{ticks:{color:'#8b95a8', maxRotation:60, minRotation:60}, grid:{display:false}}
+      }
+    }
+  });
+
+  // Backtest: desvio da projeção (computeSaldoInvestido) contra o saldo real
+  // lançado, mês a mês — só nos meses em que os dois existem. % = desvio ÷
+  // saldo real, pra dar uma noção de erro relativa (R$ sozinho não diz muito
+  // se o saldo é de R$ 50 mil ou R$ 500 mil).
+  const desvios = evolucao
+    .filter(e=>e.saldo!=null && e.saldoReal!=null && e.saldoReal!==0)
+    .map(e=>({ mes:e.mes, pct: (e.saldoReal - e.saldo) / e.saldoReal * 100 }));
+  if(desvios.length){
+    const mediaAbs = desvios.reduce((s,d)=>s+Math.abs(d.pct),0) / desvios.length;
+    const pior = desvios.reduce((a,b)=>Math.abs(b.pct)>Math.abs(a.pct)?b:a);
+    document.getElementById('backtestResumo').innerHTML =
+      `<strong>Backtest da projeção:</strong> desvio médio de ${mediaAbs.toFixed(1)}% em relação ao saldo real, `+
+      `em ${desvios.length} ${desvios.length===1?'mês comparado':'meses comparados'}. `+
+      `Maior desvio: ${formatMes(pior.mes)} (${pior.pct>=0?'+':'−'}${Math.abs(pior.pct).toFixed(1)}%).`;
+  } else {
+    document.getElementById('backtestResumo').textContent = 'Backtest da projeção: lance o saldo real de pelo menos um mês fechado pra comparar com a projeção.';
+  }
+
+  let rows = evolucao.map(e=>{
+    const cor = e.diferenca<0 ? 'var(--red)' : 'var(--accent)';
+    const destaque = e.mes===hoje ? ' style="font-weight:600;"' : '';
+    const temProjetado = e.saldo!=null;
+    const temReal = e.saldoReal!=null;
+    // Real - Projetado: positivo significa que o saldo real está SUPERANDO
+    // a projeção (bom, verde); negativo significa que está abaixo do
+    // projetado (ruim, vermelho).
+    const diffRealProj = (temProjetado && temReal) ? e.saldoReal - e.saldo : null;
+    const pctDiff = (diffRealProj!=null && e.saldoReal) ? diffRealProj / e.saldoReal * 100 : null;
+    const corDiff = diffRealProj==null ? '' : (Math.abs(diffRealProj) < 0.01 ? 'var(--muted)' : (diffRealProj>0 ? 'var(--accent)' : 'var(--red)'));
+    const temAtualizado = e.saldoAtualizado!=null;
+    return `<tr${destaque}><td>${formatMes(e.mes)}</td><td style="text-align:right;">${fmtBRL(e.salario)}</td><td style="text-align:right;">${fmtBRL(e.custo)}</td><td style="text-align:right;color:${cor};">${e.diferenca<0?'−':'+'}${fmtBRL(Math.abs(e.diferenca))}</td><td style="text-align:right;">${temProjetado?fmtBRL(e.saldo):'<span class="muted">—</span>'}</td><td style="text-align:right;">${temReal?fmtBRL(e.saldoReal):'<span class="muted">—</span>'}</td><td style="text-align:right;color:${corDiff};">${diffRealProj!=null?(diffRealProj>=0?'+':'−')+fmtBRL(Math.abs(diffRealProj)):'<span class="muted">—</span>'}${pctDiff!=null?` <span class="muted">(${pctDiff>=0?'+':'−'}${Math.abs(pctDiff).toFixed(1)}%)</span>`:''}</td><td style="text-align:right;">${temAtualizado?fmtBRL(e.saldoAtualizado):'<span class="muted">—</span>'}</td></tr>`;
+  }).join('');
+  document.getElementById('tblInvestimentos').innerHTML = `<thead><tr><th>Mês</th><th style="text-align:right;">Salário total</th><th style="text-align:right;">Custo do mês</th><th style="text-align:right;">Diferença</th><th style="text-align:right;">Saldo projetado</th><th style="text-align:right;">Saldo real</th><th style="text-align:right;">Real − projetado</th><th style="text-align:right;">Saldo atualizado</th></tr></thead><tbody>${rows}</tbody>`;
+  renderInvestimentosAporte(inicioJanela, hoje);
+}
+
+/* ================== SEGUNDA ANÁLISE: SOBRA DO SALÁRIO VIRA APORTE ================== */
+/* O gráfico "Evolução mês a mês" segue a regra do Henrique: só a FALTA sai da
+   reserva e a sobra não é aportada. Esta análise mostra o cenário alternativo:
+   toda sobra do mês (salário − custo > 0) entra na reserva como aporte.
+   Mesmas premissas do saldo atualizado (nada é recalculado à parte): mesma
+   âncora (saldo real lançado mais recente até o mês; sem real, o saldo base),
+   mesmo CDI (taxaCdiMes), mesmo faltaOuSobraMes (Sociedade, parcelas,
+   salários...). O fluxo do mês entra no fim do mês, rendendo só o saldo
+   anterior — igual ao modelo atual. Memoizado: cada mês é calculado uma vez.
+   O horizonte tem seletor próprio porque a 1ª sobra só aparece depois do fim
+   da Sociedade (jun/2028), além da janela padrão do gráfico de cima. */
+let chartInvestAporte = null;
+let mesesProjecaoAporte = 60;
+document.getElementById('selAporteHorizonte').onchange=(e)=>{ mesesProjecaoAporte=parseInt(e.target.value); renderInvestimentos(); };
+/* aporta=false reproduz exatamente o "Saldo atualizado" (só a falta sai);
+   aporta=true também soma a sobra. */
+/* Entradas extraordinárias previstas (STATE.entradasPrevistas, v2026-11-25a):
+   dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação).
+   Só entram na SEGUNDA análise (aporta=true), junto com a sobra — o gráfico
+   principal e o "Saldo atualizado" continuam sem elas, de propósito. Como o
+   passo só roda em meses projetados, entrada em mês com saldo real lançado
+   não conta (o real já a inclui). */
+function entradasPrevistasMes(m){
+  return (STATE.entradasPrevistas||[]).filter(e=>e.mes===m).reduce((s,e)=>s+(Number(e.valor)||0),0);
+}
+function computeSaldoMemo(mesAlvo, cache, aporta){
+  const cfg = STATE.investimentos || {};
+  const passo = (anterior, m) => {
+    if(anterior==null) return null;
+    const dif = faltaOuSobraMes(m).diferenca;
+    return anterior*(1+taxaCdiMes(m)/100) + (aporta ? dif + entradasPrevistasMes(m) : Math.min(0, dif));
+  };
+  const f = (m)=>{
+    if(m in cache) return cache[m];
+    let v;
+    const real = STATE.saldoReal.find(s=>s.mes===m);
+    if(real) v = real.valor;
+    else if(STATE.saldoReal.some(s=>s.mes<m)) v = passo(f(monthAdd(m,-1)), m);
+    else if(!cfg.mesInicial || cfg.saldoInicial==null || isNaN(cfg.saldoInicial) || m < cfg.mesInicial) v = null;
+    else if(m === cfg.mesInicial) v = cfg.saldoInicial;
+    else v = passo(f(monthAdd(m,-1)), m);
+    cache[m] = v;
+    return v;
+  };
+  return f(mesAlvo);
+}
+function renderInvestimentosAporte(inicioJanela, hoje){
+  const cardsEl = document.getElementById('aporteCards');
+  const notaEl = document.getElementById('aporteNota');
+  if(!inicioJanela){
+    if(chartInvestAporte){ chartInvestAporte.destroy(); chartInvestAporte = null; }
+    cardsEl.innerHTML = '';
+    notaEl.textContent = 'Defina o saldo base acima pra ver esta análise.';
+    return;
+  }
+  const meses = monthRange(inicioJanela, monthAdd(hoje, mesesProjecaoAporte));
+  const cacheSem = {}, cacheCom = {};
+  const evolucao = meses.map(m=>{
+    const real = STATE.saldoReal.find(s=>s.mes===m);
+    return { mes:m, diferenca: faltaOuSobraMes(m).diferenca, saldoReal: real ? real.valor : null,
+             sem: computeSaldoMemo(m, cacheSem, false), com: computeSaldoMemo(m, cacheCom, true) };
+  });
+  // Aporte só conta nos meses PROJETADOS (depois do último saldo real lançado);
+  // até lá o saldo é o real, que já inclui o que de fato aconteceu.
+  const reais = STATE.saldoReal.map(s=>s.mes).sort();
+  const ultimoReal = reais.length ? reais[reais.length-1] : STATE.investimentos.mesInicial;
+  const projetados = evolucao.filter(e=>e.mes > ultimoReal);
+  const aporteTotal = projetados.reduce((s,e)=>s+Math.max(0, e.diferenca), 0);
+  const entradasTotal = projetados.reduce((s,e)=>s+entradasPrevistasMes(e.mes), 0);
+  const retiradaTotal = projetados.reduce((s,e)=>s+Math.max(0, -e.diferenca), 0);
+  const fim = evolucao[evolucao.length-1];
+  // Primeiro mês com sobra — procura além da janela, até o fim do financiamento.
+  let primeiraSobra = null;
+  for(let i=1; i<=420 && !primeiraSobra; i++){
+    const m = monthAdd(ultimoReal, i);
+    if(faltaOuSobraMes(m).diferenca > 0) primeiraSobra = m;
+  }
+  const cards = [
+    { label:'Aporte acumulado no período (sobras)', value: fmtBRL(aporteTotal), cls:'green' },
+    { label:'Entradas extraordinárias no período', value: fmtBRL(entradasTotal), cls:'green' },
+    { label:'Retiradas acumuladas no período (faltas)', value: fmtBRL(retiradaTotal), cls:'red' },
+    { label:'Saldo no fim do período — sem aporte', value: fim.sem!=null ? fmtBRL(fim.sem) : '—', cls:'' },
+    { label:'Saldo no fim do período — com aporte', value: fim.com!=null ? fmtBRL(fim.com) : '—', cls:'green' },
+    { label:'Ganho do aporte (sobras + entradas + rendimento)', value: (fim.sem!=null && fim.com!=null) ? fmtBRL(fim.com - fim.sem) : '—', cls:'green' },
+    { label:'Primeiro mês com sobra', value: primeiraSobra ? formatMes(primeiraSobra) : 'nenhum até o fim do financiamento', cls:'' },
+  ];
+  cardsEl.innerHTML = cards.map(c=>`<div class="card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div></div>`).join('');
+  notaEl.textContent = `CDI da projeção: ${CDI_PROJECAO_PCT.toFixed(2)}% a.m. · aportes contados só depois de ${formatMes(ultimoReal)} (último saldo real lançado); até lá as linhas mostram o saldo real e as barras ficam de fora. Horizontes muito longos são só ordem de grandeza: custos e salário ficam parados em valor de hoje e o rendimento é composto.`;
+
+  renderEntradasPrevistas();
+  if(chartInvestAporte) chartInvestAporte.destroy();
+  chartInvestAporte = new Chart(document.getElementById('chartInvestAporte').getContext('2d'), {
+    data:{
+      labels: meses.map(formatMes),
+      datasets:[
+        // Barras só nos meses projetados: nos anteriores o fluxo já está dentro do
+        // saldo real (e uma saída grande, como ago/26, esticaria o eixo e
+        // esconderia as sobras, que são bem menores).
+        { type:'bar', label:'Sobra do mês (vira aporte)', data: evolucao.map(e=>(e.mes>ultimoReal && e.diferenca>0) ? e.diferenca : null), backgroundColor:'rgba(79,209,165,0.55)', yAxisID:'y', stack:'fluxo', order:2 },
+        { type:'bar', label:'Falta do mês (sai da reserva)', data: evolucao.map(e=>(e.mes>ultimoReal && e.diferenca<0) ? e.diferenca : null), backgroundColor:'rgba(240,97,107,0.55)', yAxisID:'y', stack:'fluxo', order:2 },
+        { type:'line', label:'Saldo atualizado — sem aporte (gráfico acima)', data: evolucao.map(e=>e.sem), borderColor:'#ffffff', backgroundColor:'#ffffff', tension:0.25, yAxisID:'y1', order:1, pointRadius:2, pointHoverRadius:5 },
+        { type:'line', label:'Saldo com aporte da sobra + entradas', data: evolucao.map(e=>e.com), borderColor:'#4fd1a5', backgroundColor:'#4fd1a5', tension:0.25, yAxisID:'y1', order:0,
+          pointRadius: evolucao.map(e=>(e.mes>ultimoReal && entradasPrevistasMes(e.mes)) ? 7 : 2), pointStyle: evolucao.map(e=>(e.mes>ultimoReal && entradasPrevistasMes(e.mes)) ? 'star' : 'circle'), pointHoverRadius:6 },
+        { type:'line', label:'Saldo real (lançado)', data: evolucao.map(e=>e.saldoReal), borderColor:'#f2b94b', backgroundColor:'#f2b94b', borderDash:[5,4], spanGaps:true, yAxisID:'y1', order:0, pointRadius:4, pointHoverRadius:7 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{position:'bottom'}, tooltip:{mode:'index', intersect:false, callbacks:{label:(c)=>c.dataset.label+': '+(c.parsed.y!=null?fmtBRL(c.parsed.y):'—')}} },
+      scales:{
+        y:{ stacked:true, position:'left', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{color:'#2a3446'} },
+        y1:{ position:'right', ticks:{color:'#8b95a8', callback:(v)=>'R$ '+(v/1000).toFixed(1)+'k'}, grid:{display:false} },
+        x:{ stacked:true, ticks:{color:'#8b95a8', maxRotation:60, minRotation:60}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderEntradasPrevistas(){
+  const el = document.getElementById('tblEntradasPrevistas');
+  if(!el) return;
+  const list = (STATE.entradasPrevistas||[]).slice().sort((a,b)=>a.mes.localeCompare(b.mes));
+  let rows = list.map(e=>`<tr>
+      <td>${formatMes(e.mes)}</td>
+      <td>${e.descricao||''}</td>
+      <td><span class="pill ${e.tipo==='suposicao'?'planejado':'pago'}">${e.tipo==='suposicao'?'suposição':'confirmada'}</span></td>
+      <td style="text-align:right;">${fmtBRL(Number(e.valor)||0)}</td>
+      <td class="actions"><button class="btn danger small" onclick="excluirEntradaPrevista('${e.id}')">Excluir</button></td>
+    </tr>`).join('');
+  if(!list.length) rows = `<tr><td colspan="5" class="muted">Nenhuma entrada prevista.</td></tr>`;
+  el.innerHTML = `<thead><tr><th>Mês</th><th>Descrição</th><th>Tipo</th><th style="text-align:right;">Valor líquido</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+}
+function excluirEntradaPrevista(id){
+  if(!confirm('Excluir esta entrada prevista?')) return;
+  STATE.entradasPrevistas = (STATE.entradasPrevistas||[]).filter(e=>e.id!==id);
+  saveState(); renderAll();
+}
+document.getElementById('btnAddEntrada').onclick = ()=>{
+  const mes = document.getElementById('entMes').value;
+  const descricao = document.getElementById('entDesc').value.trim();
+  const valor = parseFloat(document.getElementById('entValor').value);
+  const tipo = document.getElementById('entTipo').value;
+  if(!mes || !descricao || !valor){ toast('Preencha mês, descrição e valor.'); return; }
+  STATE.entradasPrevistas.push({ id: uid('ent'), mes, descricao, valor, tipo });
+  saveState();
+  ['entMes','entDesc','entValor'].forEach(i=>document.getElementById(i).value='');
+  toast('Entrada prevista adicionada!');
+  renderAll();
+};
+
+/* ================== BACKUP ================== */
+document.getElementById('btnExport').onclick=()=>{
+  const blob = new Blob([JSON.stringify(STATE, null, 1)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'gastos-backup-'+todayMonth()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup exportado!');
+};
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=(e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const imported = JSON.parse(ev.target.result);
+      STATE = sanitizeState(imported.estado || imported);
+      aplicarMigracoes();
+      saveState({motivo:'importacao'});
+      toast('Backup importado com sucesso!');
+      renderAll();
+    }catch(err){ alert('Arquivo inválido: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+};
+
+/* ================== RENDER GERAL ================== */
+function renderAll(){
+  renderDashboard();
+  renderCartaoMensal();
+  renderLancamentos();
+  renderRecorrentes();
+  renderTemporarios();
+  renderParcelas();
+  renderApto();
+  renderInvestimentos();
+}
+function iniciarApp(){
+  renderAll();
+  document.getElementById('appVersao').textContent = 'v'+APP_VERSAO+' · '+dispositivoId();
+  // Espera a sincronização com o Firebase terminar (pegar o estado mais
+  // recente entre os dois computadores) ANTES de deixar qualquer atualização
+  // automática (como o CDI) salvar/empurrar dados — evita que um STATE local
+  // desatualizado sobrescreva lançamentos mais novos feitos no outro PC.
+  initFirebaseSync().finally(function aposSincronizar(){
+    // Só agora, com o estado vencedor em mãos, aplica as migrações pendentes.
+    aplicarMigracoes();
+    renderAll();
+    // Atualiza o CDI sozinho ao abrir o arquivo, sem precisar clicar em nada —
+    // mas evita bater na API do Banco Central toda vez: só busca de novo se
+    // ainda não tiver o mês atual guardado, ou se já faz mais de 12h.
+    const hist = STATE.cdiMensal||[];
+    const temMesAtual = hist.some(h=>h.mes===todayMonth());
+    const faz12h = !STATE._cdiAtualizadoEm || (Date.now() - STATE._cdiAtualizadoEm) > 12*60*60*1000;
+    if(!temMesAtual || faz12h) atualizarCDIAutomatico(true);
+  });
+}
+/* Antes de tocar em qualquer dado, exige login (Firebase Authentication).
+   O banco gastos-mensais-3e39a ficou de leitura/escrita liberada pra
+   qualquer pessoa enquanto o app não tinha login nenhum — o databaseURL já
+   está no HTML público, então só regra fechada resolve. Login é obrigatório
+   mesmo que a sincronização esteja desativada neste dispositivo, porque o
+   localStorage local pode ter dados de sessões anteriores. */
+(function initAuthGate(){
+  const config = getSyncConfig() || DEFAULT_FIREBASE_CONFIG;
+  if(typeof firebase === 'undefined'){
+    document.getElementById('loginErro').textContent = 'Não foi possível carregar o login (sem internet?).';
+    return;
+  }
+  if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(config);
+  let appIniciado = false;
+  firebase.auth().onAuthStateChanged(function(user){
+    if(user){
+      document.body.classList.add('autenticado');
+      document.getElementById('usuarioLogado').textContent = user.email;
+      if(!appIniciado){ appIniciado = true; iniciarApp(); }
+    } else {
+      document.body.classList.remove('autenticado');
+    }
+  });
+  document.getElementById('btnLoginGoogle').onclick = function(){
+    const erroEl = document.getElementById('loginErro');
+    erroEl.textContent = '';
+    firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(err){
+      erroEl.textContent = 'Não foi possível entrar: '+(err&&err.message?err.message:err);
+    });
+  };
+  document.getElementById('btnLogout').onclick = function(){
+    firebase.auth().signOut();
+  };
+})();
+</script>
+</body>
+</html>
