@@ -47,9 +47,11 @@ Header: configurar sincronização · restaurar backup automático · exportar/i
 - `entradasPrevistas[]` — `{id, mes, valor, descricao, tipo:'suposicao'|'confirmada'}`: entradas extraordinárias na
   reserva, fora do salário, valores líquidos de IR. Entram **só na segunda análise** (`entradasPrevistasMes()` dentro de
   `computeSaldoMemo(...,aporta=true)`), nunca no gráfico principal nem no "Saldo atualizado". Mês com saldo real
-  lançado ignora a entrada (o real já a inclui). **A seleção de quais entradas entram no gráfico NÃO fica nos dados**: são
-  os ids desmarcados em `localStorage` (`gastosApp_entradasDesmarcadas`), por navegador, pra explorar cenários sem gravar
-  nada na nuvem (cada pessoa pode ter a sua); `entradaAtiva()` filtra em `entradasPrevistasMes()`
+  lançado ignora a entrada (o real já a inclui). **A seleção de quais entradas entram no gráfico fica nos dados**:
+  `entradasDesmarcadas[]` (ids que ficam de fora), então vale para os dois e sincroniza na hora; `entradaAtiva()` filtra
+  em `entradasPrevistasMes()`. O clique de seleção salva com `saveState({motivo:'selecao', semBackup:true})`: sincroniza
+  mas **não gera backup** no histórico (senão cada clique gastaria um dos 50 backups) — usar `semBackup` só para
+  preferências de visualização
 - `cdiMensal` — histórico `[{mes, valor}]` vindo do BCB
 - `_migrou*` flags — ajustes já aplicados (não reexecutar); `_syncTs` — carimbo p/ sync; `_cdiAtualizadoEm`
 

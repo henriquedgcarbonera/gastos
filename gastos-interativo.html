@@ -437,7 +437,7 @@ body:not(.autenticado) #loginGate{display:flex;}
       <div class="chart-wrap"><canvas id="chartInvestAporte"></canvas></div>
       <div class="muted" id="aporteNota" style="margin-top:10px;font-size:13px;"></div>
       <h3 style="margin:18px 0 6px;">Entradas extraordinárias previstas</h3>
-      <p class="muted" style="font-size:13px;margin-top:0;">Dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação, restituição). Valores líquidos de IR. Entram só nesta segunda análise (★ no gráfico); o gráfico de cima segue sem elas. Use <strong>Editar</strong> para ajustar mês, descrição, valor ou tipo; para tirar uma entrada do gráfico sem apagá-la, clique no botão dela acima do gráfico (essa seleção fica salva só neste navegador).</p>
+      <p class="muted" style="font-size:13px;margin-top:0;">Dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação, restituição). Valores líquidos de IR. Entram só nesta segunda análise (★ no gráfico); o gráfico de cima segue sem elas. Use <strong>Editar</strong> para ajustar mês, descrição, valor ou tipo; para tirar uma entrada do gráfico sem apagá-la, clique no botão dela acima do gráfico (a seleção vale para os dois e sincroniza na hora).</p>
       <div class="muted" id="entEditandoAviso" style="display:none;font-size:13px;margin-bottom:8px;color:var(--yellow);"></div>
       <div class="form-grid">
         <div><label>Mês</label><input type="month" id="entMes"></div>
@@ -471,7 +471,7 @@ let STATE = null;
 function sanitizeState(obj){
   const base = JSON.parse(JSON.stringify(SEED));
   const merged = Object.assign({}, base, obj);
-  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints','entradasPrevistas'].forEach(k=>{
+  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints','entradasPrevistas','entradasDesmarcadas'].forEach(k=>{
     if(!Array.isArray(merged[k])) merged[k] = Array.isArray(base[k]) ? base[k] : [];
   });
   if(!merged.investimentos || typeof merged.investimentos!=='object'){
@@ -497,7 +497,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-25d';
+const APP_VERSAO = '2026-11-25e';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -509,7 +509,7 @@ function saveState(opts){
   opts = opts||{};
   if(!opts.interno) STATE._syncTs = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
-  syncPushToFirebase(opts.motivo || (opts.interno ? 'automatico' : 'edicao'));
+  syncPushToFirebase(opts.motivo || (opts.interno ? 'automatico' : 'edicao'), opts);
 }
 function saveStateInterno(motivo){ saveState({interno:true, motivo: motivo||'automatico'}); }
 STATE = loadState();
@@ -675,10 +675,13 @@ function verificarVersaoPublicada(){
     } else if(el){ el.style.display='none'; }
   });
 }
-function syncPushToFirebase(motivo){
+/* opts.semBackup: sincroniza com os outros dispositivos mas NÃO grava backup no
+   histórico. Só pra preferências de visualização (ex: quais entradas previstas
+   aparecem no gráfico) — senão cada clique gastaria um dos 50 backups. */
+function syncPushToFirebase(motivo, opts){
   if(!syncEnabled || syncApplyingRemote || !firebaseDbRef) return;
   firebaseDbRef.set(STATE).catch(err=>console.warn('Erro ao enviar dados:', err));
-  backupSnapshotToHistorico(motivo||'edicao');
+  if(!(opts && opts.semBackup)) backupSnapshotToHistorico(motivo||'edicao');
 }
 /* Guarda uma cópia de segurança a cada envio, com carimbo de data/hora, num
    caminho separado (gastosApp/historico). Isso serve de rede de proteção:
@@ -2317,15 +2320,15 @@ document.getElementById('btnAporteProjetado').onclick=()=>{ modoAporte='projetad
    entra na reserva fora do salário (ex: bônus, venda de participação). Só
    entram na SEGUNDA análise (aporta=true), junto com a sobra — o gráfico
    principal e o "Saldo atualizado" continuam sem elas, de propósito. */
-/* Seleção das entradas no gráfico: ids DESMARCADOS, guardados só neste navegador
-   (localStorage; explorar cenários não grava nada nos dados). */
-const CHAVE_ENTRADAS_DESMARCADAS = 'gastosApp_entradasDesmarcadas';
-let entradasDesmarcadas = new Set();
-try{ entradasDesmarcadas = new Set(JSON.parse(localStorage.getItem(CHAVE_ENTRADAS_DESMARCADAS) || '[]')); }catch(e){}
-function salvarEntradasDesmarcadas(){
-  try{ localStorage.setItem(CHAVE_ENTRADAS_DESMARCADAS, JSON.stringify([...entradasDesmarcadas])); }catch(e){}
+/* Seleção das entradas no gráfico: STATE.entradasDesmarcadas = ids que ficam de
+   fora. Fica nos DADOS (vale para os dois e sincroniza na hora), mas o salvamento
+   não gera backup (semBackup): é só preferência de visualização. */
+function entradaAtiva(e){ return !(STATE.entradasDesmarcadas||[]).includes(e.id); }
+function definirEntradasDesmarcadas(ids){
+  STATE.entradasDesmarcadas = [...new Set(ids)];
+  saveState({ motivo:'selecao', semBackup:true });
+  renderInvestimentos();
 }
-function entradaAtiva(e){ return !entradasDesmarcadas.has(e.id); }
 function entradasPrevistasMes(m){
   return (STATE.entradasPrevistas||[]).filter(e=>e.mes===m && entradaAtiva(e)).reduce((s,e)=>s+(Number(e.valor)||0),0);
 }
@@ -2464,8 +2467,8 @@ function renderInvestimentosAporte(inicioJanela, hoje){
 }
 
 /* Chips: cada entrada futura vira um botão que liga/desliga a entrada no gráfico
-   e nos cards. A seleção fica só neste navegador (localStorage), não nos dados:
-   explorar cenários não grava nada na nuvem. */
+   e nos cards. A seleção fica nos dados (STATE.entradasDesmarcadas) e vale para
+   os dois; o salvamento não gera backup (semBackup). */
 function renderChipsEntradas(relevantes, ultimoMesJanela){
   const wrap = document.getElementById('aporteChipsWrap'), el = document.getElementById('aporteChips');
   if(!relevantes.length){ wrap.style.display = 'none'; el.innerHTML = ''; return; }
@@ -2480,21 +2483,15 @@ function renderChipsEntradas(relevantes, ultimoMesJanela){
   }).join('');
 }
 function alternarEntradaNoGrafico(id){
-  if(entradasDesmarcadas.has(id)) entradasDesmarcadas.delete(id); else entradasDesmarcadas.add(id);
-  salvarEntradasDesmarcadas(); renderInvestimentos();
+  const off = STATE.entradasDesmarcadas || [];
+  definirEntradasDesmarcadas(off.includes(id) ? off.filter(x=>x!==id) : off.concat(id));
 }
 document.getElementById('aporteChips').addEventListener('click', ev=>{
   const b = ev.target.closest('.chip'); if(b) alternarEntradaNoGrafico(b.dataset.id);
 });
-document.getElementById('btnChipsTodas').onclick = ()=>{ entradasDesmarcadas.clear(); salvarEntradasDesmarcadas(); renderInvestimentos(); };
-document.getElementById('btnChipsConfirmadas').onclick = ()=>{
-  entradasDesmarcadas = new Set((STATE.entradasPrevistas||[]).filter(e=>e.tipo!=='confirmada').map(e=>e.id));
-  salvarEntradasDesmarcadas(); renderInvestimentos();
-};
-document.getElementById('btnChipsNenhuma').onclick = ()=>{
-  entradasDesmarcadas = new Set((STATE.entradasPrevistas||[]).map(e=>e.id));
-  salvarEntradasDesmarcadas(); renderInvestimentos();
-};
+document.getElementById('btnChipsTodas').onclick = ()=>definirEntradasDesmarcadas([]);
+document.getElementById('btnChipsConfirmadas').onclick = ()=>definirEntradasDesmarcadas((STATE.entradasPrevistas||[]).filter(e=>e.tipo!=='confirmada').map(e=>e.id));
+document.getElementById('btnChipsNenhuma').onclick = ()=>definirEntradasDesmarcadas((STATE.entradasPrevistas||[]).map(e=>e.id));
 
 function escHtml(s){
   return String(s==null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2525,6 +2522,7 @@ function renderEntradasPrevistas(){
 function excluirEntradaPrevista(id){
   if(!confirm('Excluir esta entrada prevista?')) return;
   STATE.entradasPrevistas = (STATE.entradasPrevistas||[]).filter(e=>e.id!==id);
+  STATE.entradasDesmarcadas = (STATE.entradasDesmarcadas||[]).filter(x=>x!==id);
   if(entradaEditandoId===id) cancelarEdicaoEntrada();
   saveState(); renderAll();
 }
