@@ -72,6 +72,15 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
 .seg button+button{border-left:1px solid var(--border);}
 .seg button.on{background:var(--accent);color:#0b1410;}
 .seg button:not(.on):hover{color:var(--text);}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:20px;font-size:12.5px;cursor:pointer;user-select:none;}
+.chip .st{font-size:14px;line-height:1;}
+.chip.sup .st{color:var(--yellow);}
+.chip.conf .st{color:var(--accent);}
+.chip.on{border-color:var(--accent);}
+.chip.off{opacity:.5;text-decoration:line-through;}
+.chip:hover{border-color:var(--accent2);}
+.chip-ac{background:none;border:0;color:var(--accent2);font-size:12.5px;cursor:pointer;text-decoration:underline;padding:2px 4px;}
 .search{max-width:260px;}
 ::-webkit-scrollbar{height:8px;width:8px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
@@ -415,17 +424,28 @@ body:not(.autenticado) #loginGate{display:flex;}
       </div>
       <p class="muted" style="font-size:13px;margin-bottom:6px;">Toda sobra do mês (salário − custo, quando positiva) e as entradas extraordinárias previstas (★) entram na reserva como aporte e rendem o CDI da projeção; as faltas saem da reserva. Os botões escolhem a base do cálculo. O gráfico e a tabela acima continuam valendo sem aporte.</p>
       <p class="muted" id="aporteExplica" style="font-size:13px;margin-top:0;"></p>
+      <div id="aporteChipsWrap" style="margin:4px 0 14px;display:none;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <span class="muted" style="font-size:12.5px;">Entradas no gráfico — clique para incluir ou excluir:</span>
+          <button type="button" class="chip-ac" id="btnChipsTodas">todas</button>
+          <button type="button" class="chip-ac" id="btnChipsConfirmadas">só confirmadas</button>
+          <button type="button" class="chip-ac" id="btnChipsNenhuma">nenhuma</button>
+        </div>
+        <div class="chips" id="aporteChips"></div>
+      </div>
       <div class="cards" id="aporteCards"></div>
       <div class="chart-wrap"><canvas id="chartInvestAporte"></canvas></div>
       <div class="muted" id="aporteNota" style="margin-top:10px;font-size:13px;"></div>
       <h3 style="margin:18px 0 6px;">Entradas extraordinárias previstas</h3>
-      <p class="muted" style="font-size:13px;margin-top:0;">Dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação, restituição). Valores líquidos de IR. Entram só nesta segunda análise (★ no gráfico); o gráfico de cima segue sem elas. Suposições ficam marcadas em amarelo.</p>
+      <p class="muted" style="font-size:13px;margin-top:0;">Dinheiro que entra na reserva fora do salário (ex: bônus, venda de participação, restituição). Valores líquidos de IR. Entram só nesta segunda análise (★ no gráfico); o gráfico de cima segue sem elas. Use <strong>Editar</strong> para ajustar mês, descrição, valor ou tipo; para tirar uma entrada do gráfico sem apagá-la, clique no botão dela acima do gráfico (essa seleção fica salva só neste navegador).</p>
+      <div class="muted" id="entEditandoAviso" style="display:none;font-size:13px;margin-bottom:8px;color:var(--yellow);"></div>
       <div class="form-grid">
         <div><label>Mês</label><input type="month" id="entMes"></div>
         <div><label>Descrição</label><input type="text" id="entDesc" placeholder="ex: Bônus"></div>
         <div><label>Valor líquido (R$)</label><input type="number" step="0.01" id="entValor"></div>
         <div><label>Tipo</label><select id="entTipo"><option value="suposicao">Suposição</option><option value="confirmada">Confirmada</option></select></div>
         <div><button class="btn" id="btnAddEntrada" style="width:100%;">+ Adicionar</button></div>
+        <div><button class="btn secondary" id="btnCancelarEntrada" style="width:100%;display:none;">Cancelar</button></div>
       </div>
       <table id="tblEntradasPrevistas" style="margin-top:12px;"></table>
     </div>
@@ -477,7 +497,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-25c';
+const APP_VERSAO = '2026-11-25d';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -2297,8 +2317,17 @@ document.getElementById('btnAporteProjetado').onclick=()=>{ modoAporte='projetad
    entra na reserva fora do salário (ex: bônus, venda de participação). Só
    entram na SEGUNDA análise (aporta=true), junto com a sobra — o gráfico
    principal e o "Saldo atualizado" continuam sem elas, de propósito. */
+/* Seleção das entradas no gráfico: ids DESMARCADOS, guardados só neste navegador
+   (localStorage; explorar cenários não grava nada nos dados). */
+const CHAVE_ENTRADAS_DESMARCADAS = 'gastosApp_entradasDesmarcadas';
+let entradasDesmarcadas = new Set();
+try{ entradasDesmarcadas = new Set(JSON.parse(localStorage.getItem(CHAVE_ENTRADAS_DESMARCADAS) || '[]')); }catch(e){}
+function salvarEntradasDesmarcadas(){
+  try{ localStorage.setItem(CHAVE_ENTRADAS_DESMARCADAS, JSON.stringify([...entradasDesmarcadas])); }catch(e){}
+}
+function entradaAtiva(e){ return !entradasDesmarcadas.has(e.id); }
 function entradasPrevistasMes(m){
-  return (STATE.entradasPrevistas||[]).filter(e=>e.mes===m).reduce((s,e)=>s+(Number(e.valor)||0),0);
+  return (STATE.entradasPrevistas||[]).filter(e=>e.mes===m && entradaAtiva(e)).reduce((s,e)=>s+(Number(e.valor)||0),0);
 }
 /* aporta=false (modo real) reproduz exatamente o "Saldo atualizado"; (modo
    projetado) reproduz exatamente o "Saldo aplicado (projetado)". aporta=true
@@ -2346,6 +2375,7 @@ function renderInvestimentosAporte(inicioJanela, hoje){
   if(!inicioJanela){
     if(chartInvestAporte){ chartInvestAporte.destroy(); chartInvestAporte = null; }
     cardsEl.innerHTML = ''; explicaEl.textContent = '';
+    document.getElementById('aporteChipsWrap').style.display = 'none';
     notaEl.textContent = 'Defina o saldo base acima pra ver esta análise.';
     return;
   }
@@ -2363,6 +2393,8 @@ function renderInvestimentosAporte(inicioJanela, hoje){
   const proj = evolucao.filter(e=>e.mes > ultimoReal);
   const aporteTotal = proj.reduce((s,e)=>s+Math.max(0, e.dif), 0);
   const entradasTotal = proj.reduce((s,e)=>s+entradasPrevistasMes(e.mes), 0);
+  const relevantes = (STATE.entradasPrevistas||[]).filter(e=>e.mes > ultimoReal);   // as que ainda podem contar
+  const nAtivas = relevantes.filter(entradaAtiva).length;
   const fim = evolucao[evolucao.length-1];
   // Primeiro mês com sobra — procura além da janela, até o fim do financiamento.
   let primeiraSobra = null;
@@ -2373,7 +2405,8 @@ function renderInvestimentosAporte(inicioJanela, hoje){
   const dif = (fim.sem!=null && fim.com!=null) ? fim.com - fim.sem : null;
   const cards = [
     { label:'Aporte acumulado (sobras do salário)', value: fmtBRL(aporteTotal), cls:'green' },
-    { label:'Entradas extraordinárias previstas', value: fmtBRL(entradasTotal), cls:'green' },
+    { label:'Entradas extraordinárias previstas', value: fmtBRL(entradasTotal), cls:'green',
+      sub: relevantes.length ? nAtivas+' de '+relevantes.length+' consideradas' : '' },
     { label:'Saldo no fim do período — sem aporte', value: fim.sem!=null ? fmtBRL(fim.sem) : '—', cls:'' },
     { label:'Saldo no fim do período — com aporte', value: fim.com!=null ? fmtBRL(fim.com) : '—', cls:'green',
       sub: dif!=null ? '+'+fmtBRL(dif)+' sobre o cenário sem aporte' : '' },
@@ -2391,7 +2424,8 @@ function renderInvestimentosAporte(inicioJanela, hoje){
     explicaEl.innerHTML = `<strong>Base real:</strong> parte do último saldo real lançado${real?` (${fmtBRL(real.valor)} em ${formatMes(ultimoReal)})`:''}. Sem aporte, é a linha "Saldo atualizado" do gráfico acima.`;
   }
   const entradasPorMes = {};
-  (STATE.entradasPrevistas||[]).forEach(e=>{ if(e.mes > ultimoReal) (entradasPorMes[e.mes] = entradasPorMes[e.mes] || []).push(e); });
+  (STATE.entradasPrevistas||[]).forEach(e=>{ if(e.mes > ultimoReal && entradaAtiva(e)) (entradasPorMes[e.mes] = entradasPorMes[e.mes] || []).push(e); });
+  renderChipsEntradas(relevantes, meses[meses.length-1]);
   notaEl.innerHTML = `<span style="color:var(--yellow);">★</span> amarela = entrada prevista como suposição · <span style="color:var(--accent);">★</span> verde = confirmada (passe o mouse para ver qual). CDI da projeção: ${CDI_PROJECAO_PCT.toFixed(2)}% a.m. · sobras e entradas só contam depois de ${formatMes(ultimoReal)} (último saldo real lançado). Horizontes longos são só ordem de grandeza: custos e salário ficam parados em valor de hoje e o rendimento é composto.`;
 
   renderEntradasPrevistas();
@@ -2429,31 +2463,115 @@ function renderInvestimentosAporte(inicioJanela, hoje){
   });
 }
 
+/* Chips: cada entrada futura vira um botão que liga/desliga a entrada no gráfico
+   e nos cards. A seleção fica só neste navegador (localStorage), não nos dados:
+   explorar cenários não grava nada na nuvem. */
+function renderChipsEntradas(relevantes, ultimoMesJanela){
+  const wrap = document.getElementById('aporteChipsWrap'), el = document.getElementById('aporteChips');
+  if(!relevantes.length){ wrap.style.display = 'none'; el.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  el.innerHTML = relevantes.slice().sort((a,b)=>a.mes.localeCompare(b.mes)).map(e=>{
+    const on = entradaAtiva(e);
+    const desc = String(e.descricao||'');
+    const curta = desc.length > 30 ? desc.slice(0,29)+'…' : desc;
+    const alem = e.mes > ultimoMesJanela;
+    const dica = desc+' — '+(on ? 'clique para tirar do gráfico' : 'clique para incluir no gráfico')+(alem ? ' (fora do período mostrado)' : '');
+    return `<button type="button" class="chip ${on?'on':'off'} ${e.tipo==='confirmada'?'conf':'sup'}" data-id="${escHtml(e.id)}" title="${escHtml(dica)}"><span class="st">★</span>${formatMes(e.mes)} · ${escHtml(curta)} · ${fmtBRL(Number(e.valor)||0)}${alem?' <span class="muted">(fora do período)</span>':''}</button>`;
+  }).join('');
+}
+function alternarEntradaNoGrafico(id){
+  if(entradasDesmarcadas.has(id)) entradasDesmarcadas.delete(id); else entradasDesmarcadas.add(id);
+  salvarEntradasDesmarcadas(); renderInvestimentos();
+}
+document.getElementById('aporteChips').addEventListener('click', ev=>{
+  const b = ev.target.closest('.chip'); if(b) alternarEntradaNoGrafico(b.dataset.id);
+});
+document.getElementById('btnChipsTodas').onclick = ()=>{ entradasDesmarcadas.clear(); salvarEntradasDesmarcadas(); renderInvestimentos(); };
+document.getElementById('btnChipsConfirmadas').onclick = ()=>{
+  entradasDesmarcadas = new Set((STATE.entradasPrevistas||[]).filter(e=>e.tipo!=='confirmada').map(e=>e.id));
+  salvarEntradasDesmarcadas(); renderInvestimentos();
+};
+document.getElementById('btnChipsNenhuma').onclick = ()=>{
+  entradasDesmarcadas = new Set((STATE.entradasPrevistas||[]).map(e=>e.id));
+  salvarEntradasDesmarcadas(); renderInvestimentos();
+};
+
+function escHtml(s){
+  return String(s==null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+let entradaEditandoId = null;
 function renderEntradasPrevistas(){
   const el = document.getElementById('tblEntradasPrevistas');
   if(!el) return;
+  const reais = STATE.saldoReal.map(s=>s.mes).sort();
+  const ultimoReal = reais.length ? reais[reais.length-1] : '';
   const list = (STATE.entradasPrevistas||[]).slice().sort((a,b)=>a.mes.localeCompare(b.mes));
-  let rows = list.map(e=>`<tr>
+  let rows = list.map(e=>{
+    const passou = e.mes <= ultimoReal;           // mês com saldo real lançado: o real já inclui a entrada
+    const fora = !passou && !entradaAtiva(e);
+    const nota = passou ? ' <span class="muted">(mês já passou — o saldo real já a inclui)</span>' : (fora ? ' <span class="muted">(fora do gráfico)</span>' : '');
+    const destaque = e.id===entradaEditandoId ? ' style="outline:1px solid var(--yellow);"' : ((passou||fora) ? ' style="opacity:.55;"' : '');
+    return `<tr${destaque}>
       <td>${formatMes(e.mes)}</td>
-      <td>${e.descricao||''}</td>
+      <td>${escHtml(e.descricao||'')}${nota}</td>
       <td><span class="pill ${e.tipo==='suposicao'?'planejado':'pago'}">${e.tipo==='suposicao'?'suposição':'confirmada'}</span></td>
       <td style="text-align:right;">${fmtBRL(Number(e.valor)||0)}</td>
-      <td class="actions"><button class="btn danger small" onclick="excluirEntradaPrevista('${e.id}')">Excluir</button></td>
-    </tr>`).join('');
+      <td class="actions"><button class="btn secondary small" onclick="editarEntradaPrevista('${escHtml(e.id)}')">Editar</button> <button class="btn danger small" onclick="excluirEntradaPrevista('${escHtml(e.id)}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
   if(!list.length) rows = `<tr><td colspan="5" class="muted">Nenhuma entrada prevista.</td></tr>`;
   el.innerHTML = `<thead><tr><th>Mês</th><th>Descrição</th><th>Tipo</th><th style="text-align:right;">Valor líquido</th><th></th></tr></thead><tbody>${rows}</tbody>`;
 }
 function excluirEntradaPrevista(id){
   if(!confirm('Excluir esta entrada prevista?')) return;
   STATE.entradasPrevistas = (STATE.entradasPrevistas||[]).filter(e=>e.id!==id);
+  if(entradaEditandoId===id) cancelarEdicaoEntrada();
   saveState(); renderAll();
 }
+/* Editar reaproveita o formulário de cima: carrega a entrada, o botão vira
+   "Salvar alterações" e dá pra mudar mês, descrição, valor e tipo. */
+function editarEntradaPrevista(id){
+  const e = (STATE.entradasPrevistas||[]).find(x=>x.id===id);
+  if(!e) return;
+  entradaEditandoId = id;
+  document.getElementById('entMes').value = e.mes;
+  document.getElementById('entDesc').value = e.descricao || '';
+  document.getElementById('entValor').value = e.valor;
+  document.getElementById('entTipo').value = e.tipo === 'confirmada' ? 'confirmada' : 'suposicao';
+  document.getElementById('btnAddEntrada').textContent = 'Salvar alterações';
+  document.getElementById('btnCancelarEntrada').style.display = '';
+  const aviso = document.getElementById('entEditandoAviso');
+  aviso.style.display = ''; aviso.textContent = 'Editando: '+(e.descricao||'')+' ('+formatMes(e.mes)+')';
+  renderEntradasPrevistas();
+  document.getElementById('entDesc').scrollIntoView({block:'center', behavior:'smooth'});
+  document.getElementById('entDesc').focus();
+}
+function cancelarEdicaoEntrada(){
+  entradaEditandoId = null;
+  ['entMes','entDesc','entValor'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('entTipo').value = 'suposicao';
+  document.getElementById('btnAddEntrada').textContent = '+ Adicionar';
+  document.getElementById('btnCancelarEntrada').style.display = 'none';
+  document.getElementById('entEditandoAviso').style.display = 'none';
+  renderEntradasPrevistas();
+}
+document.getElementById('btnCancelarEntrada').onclick = cancelarEdicaoEntrada;
 document.getElementById('btnAddEntrada').onclick = ()=>{
   const mes = document.getElementById('entMes').value;
   const descricao = document.getElementById('entDesc').value.trim();
   const valor = parseFloat(document.getElementById('entValor').value);
   const tipo = document.getElementById('entTipo').value;
-  if(!mes || !descricao || !valor){ toast('Preencha mês, descrição e valor.'); return; }
+  if(!mes || !descricao || !valor || isNaN(valor)){ toast('Preencha mês, descrição e valor.'); return; }
+  if(entradaEditandoId){
+    const e = (STATE.entradasPrevistas||[]).find(x=>x.id===entradaEditandoId);
+    if(!e){ toast('Essa entrada não existe mais.'); cancelarEdicaoEntrada(); renderAll(); return; }
+    Object.assign(e, { mes, descricao, valor, tipo });
+    saveState();
+    cancelarEdicaoEntrada();
+    toast('Entrada atualizada!');
+    renderAll();
+    return;
+  }
   STATE.entradasPrevistas.push({ id: uid('ent'), mes, descricao, valor, tipo });
   saveState();
   ['entMes','entDesc','entValor'].forEach(i=>document.getElementById(i).value='');
