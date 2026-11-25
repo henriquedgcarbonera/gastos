@@ -27,7 +27,7 @@ amarelo `#f2b94b`). Chart.defaults com texto claro (senão a legenda some no fun
 | Prazo Definido | Despesas temporárias com mês de fim |
 | Parcelas (Cartão) | Parcelamentos; panorama de quanto fecha por mês; `qtdParcelas` é a única fonte de verdade |
 | Reforma do Apto | Itens a comprar / já lançados, com vínculo ao pagamento (parcelado → Parcelas; à vista/boleto → Prazo Definido); mostra "2/10", valor já pago, editar/desfazer lançamento |
-| Aplicações | Saldo base, saldo real de fechamento mensal, CDI, salários mensais + salário de referência, evolução mês a mês (projetado × atualizado × real). **Segunda análise:** painel abaixo com o gráfico "sobra do salário vira aporte" (linha sem × com aporte, barras de sobra/falta dos meses projetados, cards de resumo), horizonte próprio (padrão +5 anos), e **Entradas extraordinárias previstas** (tabela + formulário; ★ no gráfico) |
+| Aplicações | Saldo base, saldo real de fechamento mensal, CDI, salários mensais + salário de referência, evolução mês a mês (projetado × atualizado × real). **Segunda análise:** painel abaixo com o gráfico "sobra do salário vira aporte" (linha sem × com aporte, barras de sobra/falta dos meses projetados, cards de resumo), horizonte próprio (padrão +5 anos), dois botões de base — **Real** (parte do último saldo real lançado) e **Projetado** (parte do saldo base e do salário de referência, sem usar o saldo real: visão mais pessimista, igual à linha "Saldo aplicado (projetado)" do gráfico de cima) — e **Entradas extraordinárias previstas** (tabela + formulário; ★ amarela = suposição, verde = confirmada, tooltip com a descrição) |
 
 Header: configurar sincronização · restaurar backup automático · exportar/importar backup JSON.
 
@@ -59,9 +59,10 @@ recorrentes, CDI e salário de referência. Salário real e cartão avulso são 
 - `computeMes(mes)` soma: recorrentes + prazo definido + parcelas ativas + cartão avulso (+ reforma via vínculos).
 - `faltaOuSobraMes` = salários − custo do mês. **Só o que falta sai das aplicações; a sobra não é aportada
   automaticamente** (decisão do dono). O gráfico principal e a tabela seguem assim. A **segunda análise**
-  (`computeSaldoMemo(mes, cache, aporta)` e `renderInvestimentosAporte`) mostra o cenário alternativo em que a sobra
+  (`computeSaldoMemo(mes, cache, aporta, modo)` e `renderInvestimentosAporte`; `modo` = `'real'` ou `'projetado'`) mostra o cenário alternativo em que a sobra
   entra na reserva no fim do mês, com as mesmas premissas (âncora no último saldo real, `taxaCdiMes`, `faltaOuSobraMes`);
-  com `aporta=false` reproduz exatamente o "Saldo atualizado". Aporte só conta nos meses depois do último saldo real.
+  com `aporta=false` reproduz exatamente o "Saldo atualizado" (modo `real`) ou o "Saldo aplicado (projetado)" (modo
+  `projetado`, que também aplica o fluxo do mês-base ao saldo base) — diferença zero, conferida. Sobra e entradas só contam nos meses depois do último saldo real.
   Horizontes longos só dão ordem de grandeza (custos e salário parados em valor de hoje, juros compostos).
 - **Saldo projetado** (`computeSaldoInvestido`): parte do saldo base, aplica CDI mês a mês, desconta só o que faltou, usando
   **sempre o salário de referência** (estável; só muda se mudar a referência/base).
