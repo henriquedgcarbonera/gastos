@@ -471,7 +471,7 @@ let STATE = null;
 function sanitizeState(obj){
   const base = JSON.parse(JSON.stringify(SEED));
   const merged = Object.assign({}, base, obj);
-  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints','entradasPrevistas','entradasDesmarcadas'].forEach(k=>{
+  ['recorrentes','recorrentesTemporarios','parcelas','cartaoAvulso','lancamentos','aptoPlanejado','aptoPago','iluminacao','cdiMensal','salarioHenrique','salarioJuliana','saldoReal','testes','cartaoCheckpoints','entradasPrevistas','entradasDesmarcadas','ajustesProjetado'].forEach(k=>{
     if(!Array.isArray(merged[k])) merged[k] = Array.isArray(base[k]) ? base[k] : [];
   });
   if(!merged.investimentos || typeof merged.investimentos!=='object'){
@@ -497,7 +497,7 @@ function loadState(){
    estado local como "recém-editado" e ele vencia o Firebase — apagando os
    lançamentos feitos no outro computador (ex: consumo do cartão de set/26
    voltando pro valor base). */
-const APP_VERSAO = '2026-11-25e';
+const APP_VERSAO = '2026-11-27a';
 /* Identificação deste navegador, só pra rastrear nos backups QUEM enviou
    cada estado (diagnóstico de perda de dados). */
 function dispositivoId(){
@@ -983,8 +983,16 @@ function computeSaldoInvestido(mesAlvo){
     saldo = saldo * (1 + taxaMensalPct/100);
     const { diferenca } = faltaOuSobraMesReferencia(m);
     if(diferenca < 0) saldo += diferenca; // só desconta o que faltou
+    saldo += ajustesProjetadoMes(m);      // entradas pontuais só da projeção (não mexem no custo do mês)
   });
   return saldo;
+}
+/* Ajustes pontuais do saldo projetado: STATE.ajustesProjetado = [{id, mes, valor,
+   descricao}]. Valor positivo = entrada que caiu nas aplicações num mês (ex.:
+   reembolso), negativo = saída. Entram só no "Saldo aplicado (projetado)" e no
+   modo Projetado da segunda análise; o custo do mês e o saldo real não mudam. */
+function ajustesProjetadoMes(m){
+  return (STATE.ajustesProjetado||[]).filter(a=>a.mes===m).reduce((s,a)=>s+(Number(a.valor)||0),0);
 }
 /* Igual ao saldo projetado, mas em vez de partir sempre do saldo base
    original, recalcula a partir do lançamento REAL mais recente (o mais
@@ -2344,7 +2352,7 @@ function computeSaldoMemo(mesAlvo, cache, aporta, modo){
     if(anterior==null) return null;
     const dif = (projetado ? faltaOuSobraMesReferencia(m) : faltaOuSobraMes(m)).diferenca;
     const fluxo = (aporta && m > corte) ? dif + entradasPrevistasMes(m) : Math.min(0, dif);
-    return anterior*(1+taxaCdiMes(m)/100) + fluxo;
+    return anterior*(1+taxaCdiMes(m)/100) + fluxo + (projetado ? ajustesProjetadoMes(m) : 0);
   };
   const baseOk = !!cfg.mesInicial && cfg.saldoInicial!=null && !isNaN(cfg.saldoInicial);
   const f = (m)=>{

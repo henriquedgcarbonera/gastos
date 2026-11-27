@@ -52,6 +52,10 @@ Header: configurar sincronização · restaurar backup automático · exportar/i
   em `entradasPrevistasMes()`. O clique de seleção salva com `saveState({motivo:'selecao', semBackup:true})`: sincroniza
   mas **não gera backup** no histórico (senão cada clique gastaria um dos 50 backups) — usar `semBackup` só para
   preferências de visualização
+- `ajustesProjetado[]` — `{id, mes, valor, descricao}`: entradas (+) ou saídas (−) pontuais que caíram nas aplicações e
+  devem aparecer **só no saldo projetado** (`ajustesProjetadoMes()` em `computeSaldoInvestido` e no modo `projetado` de
+  `computeSaldoMemo`). Não alteram o custo do mês, o saldo real nem o "Saldo atualizado". Sem tela de edição: são
+  gravados direto nos dados
 - `cdiMensal` — histórico `[{mes, valor}]` vindo do BCB
 - `_migrou*` flags — ajustes já aplicados (não reexecutar); `_syncTs` — carimbo p/ sync; `_cdiAtualizadoEm`
 
